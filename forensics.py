@@ -425,13 +425,55 @@ def _apply_temperature_scaling(output, temperature):
     return values / temperature
 
 
+def decide_label(
+    ai_score,
+    *,
+    face_detected=False,
+    fake_threshold=0.92,
+    real_threshold=0.60,
+    fake_margin=0.18,
+    real_margin=0.08,
+):
+    ai_score = float(ai_score)
+    if face_detected:
+        ai_score *= 0.85
+
+    ai_score = _clamp01(ai_score)
+    real_score = 1.0 - ai_score
+    fake_threshold = _clamp01(fake_threshold)
+    real_threshold = _clamp01(real_threshold)
+    fake_gap = ai_score - real_score
+    real_gap = real_score - ai_score
+
+    if ai_score >= fake_threshold and fake_gap >= fake_margin:
+        prediction = LIKELY_AI_LABEL
+        confidence = ai_score * 100.0
+    elif real_score >= real_threshold and real_gap >= real_margin:
+        prediction = LIKELY_REAL_LABEL
+        confidence = real_score * 100.0
+    else:
+        prediction = UNCERTAIN_LABEL
+        confidence = max(ai_score, real_score) * 100.0
+
+    return {
+        "prediction": prediction,
+        "binary_prediction": _binary_prediction(prediction),
+        "confidence": round(confidence, 2),
+        "confidence_band": _confidence_band(confidence),
+        "review_status": _review_status(prediction, confidence),
+        "raw_probability": round(ai_score, 4),
+        "real_probability": round(real_score, 4),
+        "probability_gap": round(abs(ai_score - real_score), 4),
+    }
+
+
 def _trained_prediction_from_probs(
     fake_prob,
     real_prob,
     *,
+    face_detected=False,
     fake_threshold=0.92,
     real_threshold=0.60,
-    min_margin=0.15,
 ):
     fake_prob = _clamp01(fake_prob)
     real_prob = _clamp01(real_prob)
@@ -440,30 +482,12 @@ def _trained_prediction_from_probs(
         fake_prob /= total
         real_prob /= total
 
-    margin = abs(fake_prob - real_prob)
-    confidence = round(max(fake_prob, real_prob) * 100.0, 2)
-    fake_threshold = _clamp01(fake_threshold)
-    real_threshold = _clamp01(real_threshold)
-
-    if fake_prob >= fake_threshold and fake_prob > real_prob:
-        prediction = LIKELY_AI_LABEL
-    elif real_prob >= real_threshold and real_prob > fake_prob:
-        prediction = LIKELY_REAL_LABEL
-    elif margin < min_margin or confidence < 70:
-        prediction = UNCERTAIN_LABEL
-    else:
-        prediction = UNCERTAIN_LABEL
-
-    return {
-        "prediction": prediction,
-        "binary_prediction": _binary_prediction(prediction),
-        "confidence": confidence,
-        "confidence_band": _confidence_band(confidence),
-        "review_status": _review_status(prediction, confidence),
-        "raw_probability": round(fake_prob, 4),
-        "real_probability": round(real_prob, 4),
-        "probability_gap": round(margin, 4),
-    }
+    return decide_label(
+        fake_prob,
+        face_detected=face_detected,
+        fake_threshold=fake_threshold,
+        real_threshold=real_threshold,
+    )
 
 
 def _classify_with_resnet(face_image):
@@ -709,6 +733,7 @@ def _analyze_image(file_path, heatmap_dir):
         trained_prediction = _trained_prediction_from_probs(
             fake_score,
             real_score,
+            face_detected=bool(face_count),
             fake_threshold=full_image_prediction.get("fake_threshold", 0.92),
             real_threshold=full_image_prediction.get("real_threshold", 0.60),
         )

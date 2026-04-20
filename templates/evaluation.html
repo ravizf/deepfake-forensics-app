@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Evaluation</p>
+    <h1>Benchmark the detector on a held-out real vs AI image set.</h1>
+    <p class="lead">
+      Expected dataset layout: <code>{{ dataset_root }}</code> with folders such as
+      <code>real</code>, <code>natural</code>, <code>ai_generated</code>, <code>fake</code>, or <code>diffusion</code>.
+    </p>
+  </div>
+  {% if current_user.role == 'admin' %}
+    <form method="post">
+      <button type="submit">Run Evaluation</button>
+    </form>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Active Detector</h2>
+  <ul class="clean-list">
+    <li>Engine: {{ detector_status.engine }}</li>
+    <li>Version: {{ detector_status.detector_version }}</li>
+    {% if detector_status.model_version %}
+      <li>Model version: {{ detector_status.model_version }}</li>
+    {% endif %}
+    {% if detector_status.dataset_version %}
+      <li>Dataset version: {{ detector_status.dataset_version }}</li>
+    {% endif %}
+    {% if detector_status.training_date %}
+      <li>Training date: {{ detector_status.training_date }}</li>
+    {% endif %}
+    {% if detector_status.calibration_method %}
+      <li>Calibration: {{ detector_status.calibration_method }} (temperature={{ detector_status.temperature }})</li>
+    {% endif %}
+    <li>Status: {{ detector_status.status }}</li>
+    <li>Mode: {{ detector_status.mode }}</li>
+    {% if detector_status.framework %}
+      <li>Framework: {{ detector_status.framework }}</li>
+    {% endif %}
+    {% if detector_status.checkpoint_path %}
+      <li>Checkpoint: {{ detector_status.checkpoint_path }}</li>
+    {% endif %}
+    {% if detector_status.error %}
+      <li>Error: {{ detector_status.error }}</li>
+    {% endif %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Checkpoint Setup</h2>
+  <ul class="clean-list">
+    <li>Option 1: place <code>deepfake_model.pth</code> in the project root beside <code>app.py</code>, <code>forensics.py</code>, and <code>model_manifest.json</code>.</li>
+    <li>Option 2: if the model is in another folder, update <code>checkpoint_path</code> in <code>model_manifest.json</code> to the correct relative path such as <code>models/deepfake_model.pth</code>.</li>
+    <li>Restart the server after adding the file.</li>
+    <li>Look for <code>MODEL LOADED: True</code> in the terminal.</li>
+    <li>When loading succeeds, <code>/api/analyze</code> should switch from <code>fallback_demo</code> to <code>trained_model</code> and stop using <code>Heuristic fallback</code>.</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Dataset Status</h2>
+  {% if dataset_exists %}
+    <p class="lead">Evaluation dataset detected. You can run a benchmark from this page.</p>
+  {% else %}
+    <p class="lead">
+      No evaluation dataset found yet. Create labeled folders under <code>{{ dataset_root }}</code>
+      before running the benchmark.
+    </p>
+  {% endif %}
+</section>
+
+{% if report %}
+<section class="grid five-up">
+  <article class="metric-card"><span>Samples</span><strong>{{ report.sample_count }}</strong></article>
+  <article class="metric-card"><span>Accuracy</span><strong>{{ report.accuracy }}%</strong></article>
+  <article class="metric-card"><span>Resolved Accuracy</span><strong>{{ report.resolved_accuracy }}%</strong></article>
+  <article class="metric-card"><span>Coverage</span><strong>{{ report.coverage }}%</strong></article>
+  <article class="metric-card"><span>Uncertain</span><strong>{{ report.uncertain_count }}</strong></article>
+  <article class="metric-card"><span>ROC-AUC</span><strong>{{ report.roc_auc if report.roc_auc is not none else "N/A" }}{% if report.roc_auc is not none %}%{% endif %}</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Key Metrics</h2>
+    <ul class="clean-list">
+      <li>Generated at: {{ report.generated_at }}</li>
+      <li>Run ID: {{ report.run_id }}</li>
+      <li>Model version: {{ report.model_version or "N/A" }}</li>
+      <li>Dataset version: {{ report.dataset_version or "N/A" }}</li>
+      <li>Training date: {{ report.training_date or "N/A" }}</li>
+      <li>Calibration temperature: {{ report.temperature if report.temperature is not none else "N/A" }}</li>
+      <li>False positives: {{ report.false_positives }}</li>
+      <li>False negatives: {{ report.false_negatives }}</li>
+      <li>False positive rate: {{ report.false_positive_rate }}%</li>
+      <li>False negative rate: {{ report.false_negative_rate }}%</li>
+      <li>AI precision / recall: {{ report.ai_metrics.precision }}% / {{ report.ai_metrics.recall }}%</li>
+      <li>Real precision / recall: {{ report.real_metrics.precision }}% / {{ report.real_metrics.recall }}%</li>
+      <li>AI per-class accuracy: {{ report.per_class_accuracy.ai_generated }}%</li>
+      <li>Real per-class accuracy: {{ report.per_class_accuracy.real }}%</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Confusion Matrix</h2>
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>Expected \\ Predicted</th>
+            <th>Real</th>
+            <th>AI-Generated</th>
+            <th>Uncertain</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Real</td>
+            <td>{{ report.confusion_matrix.expected_real_predicted_real }}</td>
+            <td>{{ report.confusion_matrix.expected_real_predicted_ai }}</td>
+            <td>{{ report.confusion_matrix.expected_real_predicted_uncertain }}</td>
+          </tr>
+          <tr>
+            <td>AI-Generated</td>
+            <td>{{ report.confusion_matrix.expected_ai_predicted_real }}</td>
+            <td>{{ report.confusion_matrix.expected_ai_predicted_ai }}</td>
+            <td>{{ report.confusion_matrix.expected_ai_predicted_uncertain }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Per-Category Performance</h2>
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Samples</th>
+          <th>Accuracy</th>
+          <th>Uncertain Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.per_category %}
+          <tr>
+            <td>{{ row.category }}</td>
+            <td>{{ row.total }}</td>
+            <td>{{ row.accuracy }}%</td>
+            <td>{{ row.uncertain_rate }}%</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if report.top_failure_samples %}
+<section class="panel">
+  <h2>Top Failure Samples</h2>
+  <p class="muted">Hard-example export: <code>{{ report.hard_example_export_path }}</code></p>
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Expected</th>
+          <th>Predicted</th>
+          <th>Confidence</th>
+          <th>Band</th>
+          <th>Review Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sample in report.top_failure_samples %}
+          <tr>
+            <td>{{ sample.file }}</td>
+            <td>{{ sample.expected }}</td>
+            <td>{{ sample.predicted }}</td>
+            <td>{{ sample.confidence }}%</td>
+            <td>{{ sample.confidence_band or "N/A" }}</td>
+            <td>{{ sample.review_status or "N/A" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% else %}
+<section class="panel">
+  <h2>No Benchmark Yet</h2>
+  <p class="lead">
+    Run an evaluation after adding a labeled dataset to <code>{{ dataset_root }}</code>.
+    The results page will then show accuracy, ROC-AUC, precision/recall, false positive and false negative rates,
+    coverage, per-category performance, and the top failure samples.
+  </p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Forensic Report</p>
+    <h1>Report for case #{{ analysis.analysis_id }}</h1>
+  </div>
+  <a class="button-link" href="{{ analysis.report_download_url }}">Download Report</a>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Report Metadata</h2>
+    <ul class="clean-list">
+      <li>Report ID: {{ analysis.report_id or "pending" }}</li>
+      <li>File: {{ analysis.original_filename }}</li>
+      <li>Prediction: {{ analysis.prediction }}</li>
+      <li>Binary Result: {{ analysis.binary_prediction or analysis.prediction }}</li>
+      <li>Confidence: {{ analysis.confidence }}%</li>
+      <li>Confidence Band: {{ analysis.confidence_band or "N/A" }}</li>
+      <li>Review Status: {{ analysis.review_status or "N/A" }}</li>
+      <li>AI score: {{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</li>
+      <li>Real score: {{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</li>
+      <li>Detector: {{ analysis.inference_engine }}</li>
+      <li>Detector version: {{ analysis.detector_version }}</li>
+      <li>Model version: {{ analysis.model_version or "N/A" }}</li>
+      <li>Dataset version: {{ analysis.dataset_version or "N/A" }}</li>
+      <li>Training date: {{ analysis.training_date or "N/A" }}</li>
+      <li>Calibration: {{ analysis.calibration_method or "N/A" }}{% if analysis.temperature is not none %} (temperature={{ analysis.temperature }}){% endif %}</li>
+      <li>Analysis mode: {{ analysis.analysis_mode }}</li>
+      <li>Face count: {{ analysis.face_count }}</li>
+      <li>Face region analyzed: {{ analysis.face_strategy or "N/A" }}</li>
+      <li>Source Attribution: {{ analysis.source_model }}</li>
+      <li>SHA-256: <code>{{ analysis.file_sha256 or "Unavailable" }}</code></li>
+      <li>Uploaded At: {{ analysis.uploaded_at }}</li>
+      <li>Analyzed At: {{ analysis.created_at }}</li>
+      <li>Report Generated At: {{ analysis.generated_at }}</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Chain of Custody</h2>
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Actor</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in audit_trail %}
+            <tr>
+              <td>{{ entry.created_at }}</td>
+              <td>{{ entry.full_name or "System" }}</td>
+              <td>{{ entry.action }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="panel report-preview">
+  <h2>Rendered Report</h2>
+  {% if analysis.report_artifact_url %}
+    <iframe class="report-frame" src="{{ analysis.report_artifact_url }}" title="Rendered forensic report"></iframe>
+  {% else %}
+    <p class="muted">The report file is not available yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

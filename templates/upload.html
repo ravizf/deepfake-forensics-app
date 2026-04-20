@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Upload Evidence</p>
+    <h1>Submit an image or video for deepfake detection and forensic reporting.</h1>
+  </div>
+</section>
+
+<section class="grid two-up">
+  <form class="panel form-card" method="post" enctype="multipart/form-data">
+    <label for="file">Evidence File</label>
+    <input id="file" name="file" type="file" accept="image/*,video/*" required data-preview-target="preview-shell">
+    <p class="form-meta">Supported: JPG, PNG, WEBP, TIFF, MP4, MOV, AVI, MKV, WEBM.</p>
+    <button type="submit">Analyze Media</button>
+  </form>
+
+  <div class="panel preview-card" id="preview-shell">
+    <h2>Preview</h2>
+    <p class="muted">A preview appears here before upload so you can verify the submitted evidence.</p>
+  </div>
+</section>
+
+<section class="grid three-up">
+  <article class="panel">
+    <h2>1. Intake</h2>
+    <p>Capture file name, size, media type, analyst identity, and upload timestamp.</p>
+  </article>
+  <article class="panel">
+    <h2>2. Analysis</h2>
+    <p>Run frequency-domain scoring, face extraction, synthetic source attribution, and confidence estimation.</p>
+  </article>
+  <article class="panel">
+    <h2>3. Reporting</h2>
+    <p>Save evidence maps, log custody events, and generate a downloadable forensic report.</p>
+  </article>
+</section>
+{% endblock %}

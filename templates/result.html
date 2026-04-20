@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Analysis Result</p>
+    <h1>{{ analysis.original_filename }}</h1>
+    <p class="lead">{{ analysis.summary }}</p>
+  </div>
+  <div class="hero-actions">
+    <a class="button-link" href="{{ analysis.evidence_url }}">Artifact Heatmap</a>
+    <a class="ghost-link" href="{{ analysis.report_url }}">Open Report</a>
+  </div>
+</section>
+
+<section class="grid four-up">
+  <article class="metric-card"><span>Prediction</span><strong>{{ analysis.prediction }}</strong></article>
+  <article class="metric-card"><span>Binary Result</span><strong>{{ analysis.binary_prediction or analysis.prediction }}</strong></article>
+  <article class="metric-card"><span>Confidence</span><strong>{{ analysis.confidence }}%</strong></article>
+  <article class="metric-card"><span>Confidence Band</span><strong>{{ analysis.confidence_band or "N/A" }}</strong></article>
+  <article class="metric-card"><span>Detector Name</span><strong>{{ analysis.inference_engine }}</strong></article>
+  <article class="metric-card"><span>Analysis Mode</span><strong>{{ analysis.analysis_mode }}</strong></article>
+  <article class="metric-card"><span>Face Count</span><strong>{{ analysis.face_count }}</strong></article>
+  <article class="metric-card"><span>Review Status</span><strong>{{ analysis.review_status or "Pending" }}</strong></article>
+  <article class="metric-card"><span>AI Score</span><strong>{{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</strong></article>
+  <article class="metric-card"><span>Real Score</span><strong>{{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Evidence Summary</h2>
+    <ul class="clean-list">
+      {% for item in analysis.evidence_points %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+    <p class="muted">Source attribution API: <code>{{ analysis.source_api_url }}</code></p>
+  </article>
+
+  <article class="panel">
+    <h2>Case Metadata</h2>
+    <ul class="clean-list">
+      <li>Media type: {{ analysis.media_type }}</li>
+      <li>Uploaded by: {{ analysis.full_name }}</li>
+      <li>Uploaded at: {{ analysis.uploaded_at }}</li>
+      <li>Detector: {{ analysis.inference_engine }}</li>
+      <li>Detector version: {{ analysis.detector_version }}</li>
+      <li>Model version: {{ analysis.model_version or "N/A" }}</li>
+      <li>Dataset version: {{ analysis.dataset_version or "N/A" }}</li>
+      <li>Training date: {{ analysis.training_date or "N/A" }}</li>
+      <li>Calibration: {{ analysis.calibration_method or "N/A" }}{% if analysis.temperature is not none %} (temperature={{ analysis.temperature }}){% endif %}</li>
+      <li>Result type: {{ analysis.detector_badge }}</li>
+      <li>Binary result: {{ analysis.binary_prediction or analysis.prediction }}</li>
+      <li>Confidence band: {{ analysis.confidence_band or "N/A" }}</li>
+      <li>Review status: {{ analysis.review_status or "N/A" }}</li>
+      <li>Source attribution: {{ analysis.source_model }}</li>
+      <li>Leaning result: {{ analysis.leaning_prediction or analysis.prediction }}</li>
+      <li>AI score: {{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</li>
+      <li>Real score: {{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</li>
+      <li>Uncertainty score: {{ ((analysis.uncertainty_score or 0) * 100)|round(1) }}%</li>
+      <li>Frequency score: {{ analysis.frequency_score }}</li>
+      <li>Face count: {{ analysis.face_count }}</li>
+      <li>Face region analyzed: {{ analysis.face_strategy or "N/A" }}</li>
+      <li>SHA-256: <code>{{ analysis.file_sha256 or "Unavailable" }}</code></li>
+      <li>Analysis timestamp: {{ analysis.created_at }}</li>
+      <li>Report status: {{ analysis.report_status or "pending" }}</li>
+    </ul>
+  </article>
+</section>
+
+{% if analysis.analysis_mode != "trained_model" %}
+<section class="panel">
+  <h2>Accuracy Note</h2>
+  <p class="lead">
+    This result came from the heuristic fallback because no trained checkpoint is currently active.
+    Option 1: put <code>deepfake_model.pth</code> in the project root beside <code>app.py</code>, <code>forensics.py</code>, and <code>model_manifest.json</code>. Option 2: if the file is stored elsewhere, update <code>checkpoint_path</code> in <code>model_manifest.json</code>.
+  </p>
+  {% if analysis.prediction == "Uncertain" %}
+  <p class="lead">
+    This case is uncertain, with the current signal leaning toward <strong>{{ analysis.leaning_prediction }}</strong>.
+    Treat it as a review flag until a trained model is plugged in and benchmarked.
+  </p>
+  {% endif %}
+  <p class="lead">
+    Restart the server after adding the file. When setup is correct, the terminal should show <code>MODEL LOADED: True</code> and analysis results should move from <code>Heuristic fallback</code> to <code>SnapTrace Deepfake Detector</code>.
+  </p>
+</section>
+{% endif %}
+{% endblock %}

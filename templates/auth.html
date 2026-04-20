@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div class="panel auth-copy">
+    <p class="eyebrow">Secure Access</p>
+    <h1>{{ page_heading }}</h1>
+    <p class="lead">{{ page_blurb }}</p>
+    <ul class="clean-list">
+      <li>Role-aware access control for analysts and administrators</li>
+      <li>Audit logging for logins, uploads, reports, and case actions</li>
+      <li>Persistent case history for forensic continuity</li>
+    </ul>
+  </div>
+
+  <form class="panel form-card" method="post">
+    {% if form_mode == "register" %}
+      <label for="full_name">Full Name</label>
+      <input id="full_name" name="full_name" type="text" placeholder="Analyst name" required>
+    {% endif %}
+
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" placeholder="name@example.com" required>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" placeholder="Enter password" required>
+
+    <button type="submit">{{ submit_label }}</button>
+
+    {% if form_mode == "register" %}
+      <p class="form-meta">The first registered user is promoted to admin automatically for system monitoring.</p>
+    {% else %}
+      <p class="form-meta">Use the analyst account you created to access uploads, reports, and case history.</p>
+    {% endif %}
+  </form>
+</section>
+{% endblock %}

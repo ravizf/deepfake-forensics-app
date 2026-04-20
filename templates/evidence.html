@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Visual Evidence</p>
+    <h1>Heatmap and attribution evidence for case #{{ analysis.analysis_id }}</h1>
+  </div>
+  <a class="button-link" href="{{ analysis.report_url }}">View Report</a>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Artifact Heatmap</h2>
+    {% if analysis.heatmap_url %}
+      <img class="evidence-image" src="{{ analysis.heatmap_url }}" alt="Heatmap evidence">
+    {% else %}
+      <p>No heatmap was generated for this case.</p>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <h2>Confidence Explanation</h2>
+    <ul class="clean-list">
+      <li>Prediction: {{ analysis.prediction }}</li>
+      <li>Binary result: {{ analysis.binary_prediction or analysis.prediction }}</li>
+      <li>Confidence: {{ analysis.confidence }}%</li>
+      <li>Confidence band: {{ analysis.confidence_band or "N/A" }}</li>
+      <li>Detector used: {{ analysis.inference_engine }}</li>
+      <li>Model version: {{ analysis.model_version or "N/A" }}</li>
+      <li>Dataset version: {{ analysis.dataset_version or "N/A" }}</li>
+      <li>Calibration: {{ analysis.calibration_method or "N/A" }}{% if analysis.temperature is not none %} (temperature={{ analysis.temperature }}){% endif %}</li>
+      <li>Analysis mode: {{ analysis.analysis_mode }}</li>
+      <li>Face region analyzed: {{ analysis.face_strategy or "N/A" }}</li>
+      <li>Review status: {{ analysis.review_status or "N/A" }}</li>
+    </ul>
+    <h3>Source Attribution</h3>
+    <div class="attribution-list">
+      {% for label, score in analysis.attribution.items() %}
+        <div class="attribution-row">
+          <span>{{ label }}</span>
+          <strong>{{ (score * 100)|round(1) }}%</strong>
+        </div>
+      {% endfor %}
+    </div>
+    <h3>Why this was flagged</h3>
+    <ul class="clean-list">
+      {% for item in analysis.evidence_points %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel error-card">
+  <p class="eyebrow">Error {{ code }}</p>
+  <h1>{% if code == 403 %}Access denied{% else %}Page not found{% endif %}</h1>
+  <p class="lead">
+    {% if code == 403 %}
+      This part of the forensic workspace is restricted for your current role.
+    {% else %}
+      The requested case or page could not be located.
+    {% endif %}
+  </p>
+  <a class="button-link" href="{{ url_for('home') }}">Return Home</a>
+</section>
+{% endblock %}

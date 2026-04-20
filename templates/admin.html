@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Admin Panel</p>
+    <h1>System monitoring, recent cases, and audit activity.</h1>
+  </div>
+</section>
+
+<section class="grid five-up">
+  <article class="metric-card"><span>Users</span><strong>{{ summary.total_users }}</strong></article>
+  <article class="metric-card"><span>Uploads</span><strong>{{ summary.total_uploads }}</strong></article>
+  <article class="metric-card"><span>Analyses</span><strong>{{ summary.total_analyses }}</strong></article>
+  <article class="metric-card"><span>Flagged Cases</span><strong>{{ summary.flagged_cases }}</strong></article>
+  <article class="metric-card"><span>Audit Events</span><strong>{{ summary.audit_events }}</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Recent Cases</h2>
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Prediction</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for case in summary.recent_cases %}
+            <tr>
+              <td><a href="{{ case.result_url }}">{{ case.original_filename }}</a></td>
+              <td>{{ case.prediction }}</td>
+              <td>{{ case.confidence }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="panel">
+    <h2>Recent Audit Logs</h2>
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Actor</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in summary.recent_logs %}
+            <tr>
+              <td>{{ entry.created_at }}</td>
+              <td>{{ entry.full_name or "System" }}</td>
+              <td>{{ entry.action }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

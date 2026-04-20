@@ -1,0 +1,15 @@
+{
+  "display_name": "EfficientNet-B0 fine-tuned checkpoint",
+  "framework": "pytorch_state_dict",
+  "architecture": "efficientnet_b0_binary",
+  "checkpoint_path": "deepfake_model.pth",
+  "class_names": ["fake", "real"],
+  "input_size": [224, 224],
+  "normalization_mean": [0.485, 0.456, 0.406],
+  "normalization_std": [0.229, 0.224, 0.225],
+  "real_threshold": 0.8,
+  "fake_threshold": 0.8,
+  "prefer_face_crop": false,
+  "detector_version": "snaptrace-efficientnet-b0-v1",
+  "confidence_notes": "Checkpoint trained on full images using the same normalization as inference."
+}

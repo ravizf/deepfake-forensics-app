@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Analyst Dashboard</p>
+    <h1>Track current investigations and launch new forensic scans.</h1>
+  </div>
+  <a class="button-link" href="{{ url_for('upload_page') }}">Upload New Evidence</a>
+</section>
+
+<section class="grid four-up">
+  <article class="metric-card"><span>Total Cases</span><strong>{{ summary.total_cases }}</strong></article>
+  <article class="metric-card"><span>Flagged Fake</span><strong>{{ summary.fake_cases }}</strong></article>
+  <article class="metric-card"><span>Reports Ready</span><strong>{{ summary.reports_ready }}</strong></article>
+  <article class="metric-card"><span>Audit Events</span><strong>{{ summary.audit_events }}</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Recent Analyses</h2>
+    {% if summary.recent_cases %}
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Prediction</th>
+              <th>Confidence</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for case in summary.recent_cases %}
+              <tr>
+                <td><a href="{{ case.result_url }}">{{ case.original_filename }}</a></td>
+                <td>{{ case.prediction }}</td>
+                <td>{{ case.confidence }}%</td>
+                <td>{{ case.created_at }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No analyses yet. Upload a suspicious image or video to start your first case.</p>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <h2>Workflow Coverage</h2>
+    <ul class="clean-list">
+      <li>Evidence intake with file metadata capture</li>
+      <li>Deepfake prediction and confidence scoring</li>
+      <li>Source attribution API and visual heatmap evidence</li>
+      <li>Generated reports plus investigation history</li>
+      <li>Audit logging for forensic traceability</li>
+    </ul>
+  </article>
+</section>
+{% endblock %}

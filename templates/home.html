@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Digital Media Integrity Platform</p>
+    <h1>Investigate suspicious images and videos with explainable forensic evidence.</h1>
+    <p class="lead">
+      SnapTrace combines secure evidence intake, deepfake scoring, source attribution, heatmap visualization,
+      downloadable reports, and auditable case history in one workflow.
+    </p>
+    <div class="hero-actions">
+      {% if current_user %}
+        <a class="button-link" href="{{ url_for('upload_page') }}">Start New Analysis</a>
+        <a class="ghost-link" href="{{ url_for('dashboard') }}">Open Dashboard</a>
+      {% else %}
+        <a class="button-link" href="{{ url_for('register') }}">Create Account</a>
+        <a class="ghost-link" href="{{ url_for('login') }}">Sign In</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="hero-panel">
+    <div class="metric-card">
+      <span>Frontend</span>
+      <strong>Login, dashboard, upload, results, evidence, reports, history, admin</strong>
+    </div>
+    <div class="metric-card">
+      <span>Backend</span>
+      <strong>Auth, upload handling, APIs, reports, audit trail, SQLite records</strong>
+    </div>
+    <div class="metric-card">
+      <span>ML Module</span>
+      <strong>MTCNN-ready face extraction, DCT analysis, confidence scoring, Grad-CAM-style heatmaps</strong>
+    </div>
+  </div>
+</section>
+
+<section class="grid three-up">
+  <article class="panel">
+    <h2>Case Intake</h2>
+    <p>Upload suspicious image or video evidence, capture file metadata, and preserve a chain of custody.</p>
+  </article>
+  <article class="panel">
+    <h2>Analysis Results</h2>
+    <p>Review real-or-fake classification, confidence score, source attribution, and supporting evidence notes.</p>
+  </article>
+  <article class="panel">
+    <h2>Forensic Reporting</h2>
+    <p>Generate downloadable case reports and maintain searchable investigation history for every analyst.</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>System Overview</h2>
+  <div class="grid two-up">
+    <div>
+      <h3>Core Pages</h3>
+      <ul class="clean-list">
+        <li>Login / Register</li>
+        <li>Home / Dashboard</li>
+        <li>Upload and Analysis Result</li>
+        <li>Heatmap / Visual Evidence</li>
+        <li>Report and History</li>
+        <li>Admin Monitoring Panel</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Tracked Data</h3>
+      <ul class="clean-list">
+        <li>User details and roles</li>
+        <li>Uploaded file metadata</li>
+        <li>Prediction result and confidence</li>
+        <li>Source attribution and evidence notes</li>
+        <li>Generated forensic reports</li>
+        <li>Audit logs and custody events</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Main Pages of the Web App</h2>
+  <div class="grid two-up">
+    <article>
+      <h3>Home Page</h3>
+      <p>Introduces the project and explains its purpose.</p>
+    </article>
+    <article>
+      <h3>Upload Page</h3>
+      <p>Allows users to upload suspicious images or videos.</p>
+    </article>
+    <article>
+      <h3>Analysis Result Page</h3>
+      <p>Displays whether the media is real or fake, along with the likely source model and confidence score.</p>
+    </article>
+    <article>
+      <h3>Heatmap Page</h3>
+      <p>Shows visual forensic evidence using heatmaps.</p>
+    </article>
+    <article>
+      <h3>Report Page</h3>
+      <p>Generates a downloadable forensic report.</p>
+    </article>
+    <article>
+      <h3>History Page</h3>
+      <p>Displays previously analyzed records.</p>
+    </article>
+  </div>
+</section>
+{% endblock %}

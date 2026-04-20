@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnapTrace Deploy Demo</title>
+  <style>
+    :root {
+      --bg: #07111c;
+      --bg-soft: #102133;
+      --panel: rgba(12, 26, 42, 0.9);
+      --panel-border: rgba(110, 191, 255, 0.2);
+      --text: #eff6ff;
+      --muted: #a9bfd8;
+      --accent: #ff9f43;
+      --accent-2: #64d8ff;
+      --success: #5ce1b3;
+      --danger: #ff7b72;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Aptos", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(100, 216, 255, 0.14), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(255, 159, 67, 0.18), transparent 38%),
+        linear-gradient(135deg, #07111c 0%, #0f1720 42%, #17314a 100%);
+      display: grid;
+      place-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .shell {
+      width: min(1080px, 100%);
+      display: grid;
+      gap: 1rem;
+    }
+
+    .hero,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 1.5rem;
+      padding: 1.4rem;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent-2);
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    .lead, .muted {
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    .metric {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(169, 191, 216, 0.14);
+      border-radius: 1rem;
+      padding: 0.9rem;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .metric strong {
+      font-size: 1.08rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="file"] {
+      width: 100%;
+      padding: 0.9rem 1rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(169, 191, 216, 0.24);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      margin-bottom: 0.8rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.82rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #09111b;
+      background: linear-gradient(135deg, var(--accent), #ffc776);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .ghost {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(169, 191, 216, 0.24);
+      box-shadow: none;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .preview-shell {
+      min-height: 18rem;
+      display: grid;
+      align-content: start;
+      gap: 0.8rem;
+    }
+
+    .preview-shell img {
+      width: 100%;
+      border-radius: 1rem;
+      border: 1px solid rgba(169, 191, 216, 0.22);
+    }
+
+    .status-ok { color: var(--success); }
+    .status-bad { color: var(--danger); }
+
+    code {
+      font-family: Consolas, monospace;
+      color: var(--accent-2);
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .grid,
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Netlify Frontend</p>
+        <h1>SnapTrace Deploy Demo</h1>
+        <p class="lead">
+          This page is meant for Netlify static hosting. It calls the Flask backend through
+          the public Render endpoint at <code>/api/public-analyze</code>.
+        </p>
+        <div class="button-row">
+          <button id="healthButton" class="ghost" type="button">Check Backend</button>
+          <span id="healthStatus" class="muted">Backend status not checked yet.</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Deployment Setup</h2>
+        <ol class="muted">
+          <li>Deploy the Flask app to Render.</li>
+          <li>Set <code>window.SNAPTRACE_API_BASE</code> in <code>config.js</code> to your Render URL.</li>
+          <li>Deploy this static page to Netlify.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Backend Connection</h2>
+        <label for="apiBase">API Base URL</label>
+        <input id="apiBase" type="url" placeholder="https://your-render-service.onrender.com">
+        <p class="muted">
+          Leave blank for local development. On Netlify, point this to your Render backend once and it will be remembered in your browser.
+        </p>
+        <button id="saveApiBase" class="ghost" type="button">Save Backend URL</button>
+      </article>
+
+      <article class="panel preview-shell">
+        <h2>Preview</h2>
+        <p class="muted">Choose an image or video, then run the public analysis endpoint.</p>
+        <img id="preview" alt="Evidence preview" hidden>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Upload and Analyze</h2>
+      <label for="fileInput">Evidence File</label>
+      <input type="file" id="fileInput" accept="image/*,video/*">
+      <div class="button-row">
+        <button id="analyzeButton" type="button">Analyze File</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Latest Result</h2>
+      <div class="metric-grid">
+        <div class="metric"><span>Prediction</span><strong id="predictionValue">N/A</strong></div>
+        <div class="metric"><span>Binary Result</span><strong id="binaryValue">N/A</strong></div>
+        <div class="metric"><span>Confidence</span><strong id="confidenceValue">N/A</strong></div>
+        <div class="metric"><span>Detector</span><strong id="detectorValue">N/A</strong></div>
+      </div>
+      <p id="resultMessage" class="muted" style="margin-top: 1rem;">No analysis has been run yet.</p>
+    </section>
+  </div>
+
+  <script src="./config.js"></script>
+  <script>
+    const STORAGE_KEY = "snaptrace_api_base";
+    const apiBaseInput = document.getElementById("apiBase");
+    const preview = document.getElementById("preview");
+    const healthStatus = document.getElementById("healthStatus");
+    const resultMessage = document.getElementById("resultMessage");
+
+    function getConfiguredApiBase() {
+      const explicit = window.SNAPTRACE_API_BASE || localStorage.getItem(STORAGE_KEY) || "";
+      return explicit.replace(/\/+$/, "");
+    }
+
+    function getApiBase() {
+      const configured = getConfiguredApiBase();
+      if (configured) {
+        return configured;
+      }
+
+      const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      return isLocal ? window.location.origin : "";
+    }
+
+    function endpoint(path) {
+      const base = getApiBase();
+      return base ? `${base}${path}` : path;
+    }
+
+    function setStatus(message, ok) {
+      healthStatus.textContent = message;
+      healthStatus.className = ok ? "status-ok" : "status-bad";
+    }
+
+    apiBaseInput.value = getConfiguredApiBase();
+
+    document.getElementById("saveApiBase").addEventListener("click", () => {
+      const value = apiBaseInput.value.trim().replace(/\/+$/, "");
+      if (value) {
+        localStorage.setItem(STORAGE_KEY, value);
+        setStatus(`Saved backend URL: ${value}`, true);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        setStatus("Cleared saved backend URL. Using same-origin/local default.", true);
+      }
+    });
+
+    document.getElementById("fileInput").addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        preview.hidden = true;
+        preview.removeAttribute("src");
+        return;
+      }
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+    });
+
+    document.getElementById("healthButton").addEventListener("click", async () => {
+      try {
+        const response = await fetch(endpoint("/api/health"));
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Health check failed");
+        }
+        const detector = data.detector || {};
+        setStatus(
+          `Backend ok | mode=${detector.mode || "unknown"} | version=${detector.detector_version || "n/a"}`,
+          true
+        );
+      } catch (error) {
+        setStatus(`Backend check failed: ${error.message}`, false);
+      }
+    });
+
+    document.getElementById("analyzeButton").addEventListener("click", async () => {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        resultMessage.textContent = "Choose a file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      resultMessage.textContent = "Analyzing...";
+
+      try {
+        const response = await fetch(endpoint("/api/public-analyze"), {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Analysis failed");
+        }
+
+        document.getElementById("predictionValue").textContent = data.prediction || "N/A";
+        document.getElementById("binaryValue").textContent = data.binary_prediction || "N/A";
+        document.getElementById("confidenceValue").textContent = `${data.confidence ?? "N/A"}%`;
+        document.getElementById("detectorValue").textContent = data.detector_version || data.inference_engine || "N/A";
+        resultMessage.textContent =
+          `Model ${data.model_version || "unknown"} on ${data.dataset_version || "unknown"} | ` +
+          `confidence band: ${data.confidence_band || "N/A"} | review: ${data.review_status || "N/A"}`;
+      } catch (error) {
+        resultMessage.textContent = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

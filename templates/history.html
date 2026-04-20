@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">History</p>
+    <h1>Previously analyzed evidence and generated reports.</h1>
+  </div>
+</section>
+
+<section class="panel">
+  {% if cases %}
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>Case</th>
+            <th>Prediction</th>
+            <th>Confidence</th>
+            <th>Detector</th>
+            <th>Source</th>
+            <th>Analyst</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for case in cases %}
+            <tr>
+              <td>{{ case.original_filename }}</td>
+              <td>{{ case.prediction }}</td>
+              <td>{{ case.confidence }}%</td>
+              <td>{{ case.detector_version }}<br><span class="muted">{{ case.detector_badge }}</span></td>
+              <td>{{ case.source_model }}</td>
+              <td>{{ case.full_name }}</td>
+              <td>
+                <a href="{{ case.result_url }}">Result</a>
+                <a href="{{ case.evidence_url }}">Heatmap</a>
+                <a href="{{ case.report_url }}">Report</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>No case history available yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

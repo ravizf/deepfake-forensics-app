@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: snaptrace-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PUBLIC_API_ENABLED
+        value: true

@@ -425,7 +425,14 @@ def _apply_temperature_scaling(output, temperature):
     return values / temperature
 
 
-def _trained_prediction_from_probs(fake_prob, real_prob):
+def _trained_prediction_from_probs(
+    fake_prob,
+    real_prob,
+    *,
+    fake_threshold=0.80,
+    real_threshold=0.80,
+    min_margin=0.15,
+):
     fake_prob = _clamp01(fake_prob)
     real_prob = _clamp01(real_prob)
     total = fake_prob + real_prob
@@ -435,12 +442,16 @@ def _trained_prediction_from_probs(fake_prob, real_prob):
 
     margin = abs(fake_prob - real_prob)
     confidence = round(max(fake_prob, real_prob) * 100.0, 2)
-    if margin < 0.15:
+    fake_threshold = _clamp01(fake_threshold)
+    real_threshold = _clamp01(real_threshold)
+
+    if fake_prob >= fake_threshold and fake_prob > real_prob:
+        prediction = LIKELY_AI_LABEL
+    elif real_prob >= real_threshold and real_prob > fake_prob:
+        prediction = LIKELY_REAL_LABEL
+    elif margin < min_margin or confidence < 70:
         prediction = UNCERTAIN_LABEL
     else:
-        prediction = LIKELY_AI_LABEL if fake_prob > real_prob else LIKELY_REAL_LABEL
-
-    if confidence < 70:
         prediction = UNCERTAIN_LABEL
 
     return {
@@ -498,7 +509,12 @@ def _classify_with_resnet(face_image):
         return None
 
     fake_prob, real_prob = scores
-    prediction = _trained_prediction_from_probs(fake_prob, real_prob)
+    prediction = _trained_prediction_from_probs(
+        fake_prob,
+        real_prob,
+        fake_threshold=meta.get("fake_threshold", 0.80),
+        real_threshold=meta.get("real_threshold", 0.80),
+    )
     print("Fake prob:", fake_prob, flush=True)
     print("Real prob:", real_prob, flush=True)
     print("Prediction:", prediction["prediction"], flush=True)
@@ -511,6 +527,8 @@ def _classify_with_resnet(face_image):
         "training_date": meta.get("training_date"),
         "temperature": meta.get("temperature"),
         "calibration_method": meta.get("calibration_method"),
+        "fake_threshold": meta.get("fake_threshold", 0.80),
+        "real_threshold": meta.get("real_threshold", 0.80),
         "mode": "trained_model",
     }
 
@@ -688,7 +706,12 @@ def _analyze_image(file_path, heatmap_dir):
             face_strategy = "full-image-only"
 
         real_score = 1.0 - fake_score
-        trained_prediction = _trained_prediction_from_probs(fake_score, real_score)
+        trained_prediction = _trained_prediction_from_probs(
+            fake_score,
+            real_score,
+            fake_threshold=full_image_prediction.get("fake_threshold", 0.80),
+            real_threshold=full_image_prediction.get("real_threshold", 0.80),
+        )
         uncertainty_score = _clamp01(1.0 - trained_prediction["probability_gap"])
         prediction = trained_prediction["prediction"]
         confidence = trained_prediction["confidence"]

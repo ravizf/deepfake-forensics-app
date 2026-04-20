@@ -622,6 +622,9 @@ def _leaning_prediction(fake_score):
 
 def _analyze_image(file_path, heatmap_dir):
     image = Image.open(file_path).convert("RGB")
+    max_side = 1280
+    if max(image.size) > max_side:
+        image.thumbnail((max_side, max_side))
     faces, face_count, face_strategy = _extract_faces(image)
     primary_face = faces[0] if faces else image
 

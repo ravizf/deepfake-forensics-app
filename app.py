@@ -17,6 +17,7 @@ from flask import (
     url_for,
 )
 from flask_cors import CORS
+from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -56,6 +57,7 @@ from forensics import (
 app = Flask(__name__)
 CORS(app)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "snaptrace-dev-key")
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "uploads")
 app.config["HEATMAP_FOLDER"] = os.path.join(app.root_path, "artifacts", "heatmaps")
 app.config["REPORT_FOLDER"] = os.path.join(app.root_path, "artifacts", "reports")
@@ -233,6 +235,16 @@ def persist_upload(file_storage):
     return destination, original_name, stored_name, size, file_sha256
 
 
+def preprocess_image(file_path):
+    try:
+        with Image.open(file_path) as image:
+            normalized = ImageOps.exif_transpose(image).convert("RGB")
+            normalized.save(file_path)
+            return normalized.size
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValueError("Unsupported or corrupted image file.") from exc
+
+
 def ensure_report_record(analysis):
     if analysis.get("report_path") and os.path.exists(analysis["report_path"]):
         return analysis
@@ -265,6 +277,9 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
 
     file_path, original_name, stored_name, size, file_sha256 = persist_upload(file_storage)
     media_type = infer_media_type(original_name)
+    if media_type == "image":
+        preprocess_image(file_path)
+
     upload_id = create_media_upload(
         user_id=user["id"],
         original_filename=original_name,
@@ -304,21 +319,31 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
             ),
         )
         analysis = get_analysis_detail(analysis_id)
-        audit_trail = get_case_audit_logs(upload_id=upload_id, analysis_id=analysis_id)
-        report_path = generate_report_document(
-            analysis=analysis,
-            audit_trail=audit_trail,
-            report_dir=app.config["REPORT_FOLDER"],
-        )
-        create_report(analysis_id, report_path, "ready")
-        audit(
-            "REPORT_GENERATED",
-            "report",
-            analysis_id,
-            f"Generated forensic report for analysis #{analysis_id}",
-        )
+        try:
+            audit_trail = get_case_audit_logs(upload_id=upload_id, analysis_id=analysis_id)
+            report_path = generate_report_document(
+                analysis=analysis,
+                audit_trail=audit_trail,
+                report_dir=app.config["REPORT_FOLDER"],
+            )
+            create_report(analysis_id, report_path, "ready")
+            audit(
+                "REPORT_GENERATED",
+                "report",
+                analysis_id,
+                f"Generated forensic report for analysis #{analysis_id}",
+            )
+        except Exception as report_exc:
+            app.logger.exception("Report generation failed")
+            audit(
+                "REPORT_GENERATION_FAILED",
+                "report",
+                analysis_id,
+                f"Report generation failed: {report_exc}",
+            )
         return enrich_analysis(get_analysis_detail(analysis_id))
-    except Exception:
+    except Exception as exc:
+        app.logger.exception("Analysis workflow failed")
         set_upload_status(upload_id, "failed")
         audit(
             "ANALYSIS_FAILED",
@@ -461,9 +486,12 @@ def upload_page():
                 flash("Analysis completed successfully.", "success")
                 return redirect(url_for("result_page", analysis_id=analysis["analysis_id"]))
             except ValueError as exc:
+                app.logger.exception("Validation error during upload")
                 flash(str(exc), "danger")
             except Exception as exc:
+                app.logger.exception("Unhandled error during analysis")
                 flash(f"Analysis failed: {exc}", "danger")
+                return render_template("upload.html", title="Upload Evidence"), 500
 
     return render_template("upload.html", title="Upload Evidence")
 
@@ -557,6 +585,7 @@ def api_analyze():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
+        app.logger.exception("API analyze failed")
         return jsonify({"error": str(exc)}), 500
 
 
@@ -580,7 +609,13 @@ def api_public_analyze():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
+        app.logger.exception("Public API analyze failed")
         return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/api/health")

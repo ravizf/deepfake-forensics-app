@@ -33,6 +33,9 @@ IMAGE_SIZE = 224
 CLASS_NAMES = ["fake", "real"]
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]
 NORMALIZE_STD = [0.229, 0.224, 0.225]
+REAL_CLASS_WEIGHT_BOOST = 1.2
+DEFAULT_REAL_THRESHOLD = 0.65
+DEFAULT_FAKE_THRESHOLD = 0.85
 
 
 def _require_torch():
@@ -270,6 +273,8 @@ def train_model(epochs=12, architecture="efficientnet_b0_binary"):
 
     total_train = float(sum(class_counts))
     class_weights = [total_train / (len(CLASS_NAMES) * count) for count in class_counts]
+    real_index = CLASS_NAMES.index("real")
+    class_weights[real_index] *= REAL_CLASS_WEIGHT_BOOST
     criterion = torch.nn.CrossEntropyLoss(
         weight=torch.tensor(class_weights, dtype=torch.float32, device=device)
     )
@@ -325,13 +330,16 @@ def train_model(epochs=12, architecture="efficientnet_b0_binary"):
         "normalization_std": NORMALIZE_STD,
         "positive_label": "ai_generated",
         "channel_order": "nchw",
-        "real_threshold": 0.80,
-        "fake_threshold": 0.80,
+        "real_threshold": DEFAULT_REAL_THRESHOLD,
+        "fake_threshold": DEFAULT_FAKE_THRESHOLD,
         "prefer_face_crop": False,
         "detector_version": model_version,
         "temperature": temperature,
         "calibration_method": calibration_method,
-        "confidence_notes": "Confidence reflects the loaded PyTorch checkpoint output.",
+        "confidence_notes": (
+            "Confidence reflects the loaded PyTorch checkpoint output with a stricter "
+            "fake threshold to reduce false positives on real photos."
+        ),
     }
     MODEL_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"Saved manifest to {MODEL_MANIFEST_PATH}")
@@ -347,4 +355,4 @@ def train_model(epochs=12, architecture="efficientnet_b0_binary"):
 
 
 if __name__ == "__main__":
-    train_model()
+    train_model(epochs=12, architecture="efficientnet_b0_binary")

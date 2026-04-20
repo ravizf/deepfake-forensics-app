@@ -26,11 +26,11 @@
   ],
   "positive_label": "ai_generated",
   "channel_order": "nchw",
-  "real_threshold": 0.8,
-  "fake_threshold": 0.8,
+  "real_threshold": 0.65,
+  "fake_threshold": 0.85,
   "prefer_face_crop": false,
   "detector_version": "snaptrace-efficientnet-b0-v1",
   "temperature": 1.086684,
   "calibration_method": "temperature_scaling",
-  "confidence_notes": "Confidence reflects the loaded PyTorch checkpoint output."
+  "confidence_notes": "Confidence reflects the loaded PyTorch checkpoint output with a stricter fake threshold to reduce false positives on real photos."
 }

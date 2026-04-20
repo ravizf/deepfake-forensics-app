@@ -2,6 +2,11 @@ import os
 import hashlib
 from functools import wraps
 
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 from flask import (
     Flask,
     abort,
@@ -491,9 +496,13 @@ def upload_page():
             except Exception as exc:
                 app.logger.exception("Unhandled error during analysis")
                 flash(f"Analysis failed: {exc}", "danger")
-                return render_template("upload.html", title="Upload Evidence"), 500
+                return render_template(
+                    "upload.html",
+                    title="Upload Evidence",
+                    error_message=str(exc),
+                ), 500
 
-    return render_template("upload.html", title="Upload Evidence")
+    return render_template("upload.html", title="Upload Evidence", error_message=None)
 
 
 @app.route("/analysis/<int:analysis_id>")

@@ -7,6 +7,14 @@
   </div>
 </section>
 
+{% if error_message %}
+<section class="panel">
+  <h2>Last Upload Error</h2>
+  <p>{{ error_message }}</p>
+  <p class="muted">Check the Render logs too. The backend now logs the full exception for this upload attempt.</p>
+</section>
+{% endif %}
+
 <section class="grid two-up">
   <form class="panel form-card" method="post" enctype="multipart/form-data">
     <label for="file">Evidence File</label>

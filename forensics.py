@@ -112,8 +112,8 @@ def _load_model_manifest():
     manifest["normalization_std"] = manifest.get(
         "normalization_std", [0.229, 0.224, 0.225]
     )
-    manifest["real_threshold"] = float(manifest.get("real_threshold", 0.80))
-    manifest["fake_threshold"] = float(manifest.get("fake_threshold", 0.80))
+    manifest["real_threshold"] = float(manifest.get("real_threshold", 0.60))
+    manifest["fake_threshold"] = float(manifest.get("fake_threshold", 0.92))
     manifest["prefer_face_crop"] = bool(manifest.get("prefer_face_crop", False))
     manifest["positive_label"] = manifest.get("positive_label", "ai_generated")
     manifest["channel_order"] = manifest.get("channel_order", "nchw")
@@ -429,8 +429,8 @@ def _trained_prediction_from_probs(
     fake_prob,
     real_prob,
     *,
-    fake_threshold=0.80,
-    real_threshold=0.80,
+    fake_threshold=0.92,
+    real_threshold=0.60,
     min_margin=0.15,
 ):
     fake_prob = _clamp01(fake_prob)
@@ -512,8 +512,8 @@ def _classify_with_resnet(face_image):
     prediction = _trained_prediction_from_probs(
         fake_prob,
         real_prob,
-        fake_threshold=meta.get("fake_threshold", 0.80),
-        real_threshold=meta.get("real_threshold", 0.80),
+        fake_threshold=meta.get("fake_threshold", 0.92),
+        real_threshold=meta.get("real_threshold", 0.60),
     )
     print("Fake prob:", fake_prob, flush=True)
     print("Real prob:", real_prob, flush=True)
@@ -527,8 +527,8 @@ def _classify_with_resnet(face_image):
         "training_date": meta.get("training_date"),
         "temperature": meta.get("temperature"),
         "calibration_method": meta.get("calibration_method"),
-        "fake_threshold": meta.get("fake_threshold", 0.80),
-        "real_threshold": meta.get("real_threshold", 0.80),
+        "fake_threshold": meta.get("fake_threshold", 0.92),
+        "real_threshold": meta.get("real_threshold", 0.60),
         "mode": "trained_model",
     }
 
@@ -709,8 +709,8 @@ def _analyze_image(file_path, heatmap_dir):
         trained_prediction = _trained_prediction_from_probs(
             fake_score,
             real_score,
-            fake_threshold=full_image_prediction.get("fake_threshold", 0.80),
-            real_threshold=full_image_prediction.get("real_threshold", 0.80),
+            fake_threshold=full_image_prediction.get("fake_threshold", 0.92),
+            real_threshold=full_image_prediction.get("real_threshold", 0.60),
         )
         uncertainty_score = _clamp01(1.0 - trained_prediction["probability_gap"])
         prediction = trained_prediction["prediction"]

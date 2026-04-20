@@ -431,24 +431,23 @@ def decide_label(
     face_detected=False,
     fake_threshold=0.92,
     real_threshold=0.60,
-    fake_margin=0.18,
-    real_margin=0.08,
 ):
     ai_score = float(ai_score)
     if face_detected:
-        ai_score *= 0.85
+        ai_score *= 0.65
 
     ai_score = _clamp01(ai_score)
     real_score = 1.0 - ai_score
     fake_threshold = _clamp01(fake_threshold)
     real_threshold = _clamp01(real_threshold)
-    fake_gap = ai_score - real_score
-    real_gap = real_score - ai_score
 
-    if ai_score >= fake_threshold and fake_gap >= fake_margin:
+    if face_detected and ai_score < 0.80:
+        prediction = LIKELY_REAL_LABEL
+        confidence = real_score * 100.0
+    elif ai_score >= fake_threshold:
         prediction = LIKELY_AI_LABEL
         confidence = ai_score * 100.0
-    elif real_score >= real_threshold and real_gap >= real_margin:
+    elif real_score >= real_threshold:
         prediction = LIKELY_REAL_LABEL
         confidence = real_score * 100.0
     else:

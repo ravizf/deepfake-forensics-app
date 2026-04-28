@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Model Details</p>
+    <h1>Model / Dataset Page</h1>
+    <p class="lead">Architecture, dataset, benchmark snapshot, and known limitations for the active prototype detector.</p>
+  </div>
+</section>
+
+<section class="grid four-up">
+  <article class="metric-card"><span>Model Status</span><strong>{{ active_detector_label }}</strong></article>
+  <article class="metric-card"><span>Architecture</span><strong>{{ detector_status.architecture or "N/A" }}</strong></article>
+  <article class="metric-card"><span>Dataset</span><strong>{{ detector_status.dataset_version or "N/A" }}</strong></article>
+  <article class="metric-card"><span>Version</span><strong>{{ detector_status.model_version or detector_status.detector_version or "N/A" }}</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Model Card</h2>
+    <ul class="clean-list">
+      <li>Model: CNN prototype detector</li>
+      <li>Architecture: {{ detector_status.architecture or "Not declared" }}</li>
+      <li>Dataset: {{ detector_status.dataset_version or "Not declared" }}</li>
+      <li>Training date: {{ detector_status.training_date or "N/A" }}</li>
+      <li>Calibration: {{ detector_status.calibration_method or "N/A" }}{% if detector_status.temperature is not none %} (temperature={{ detector_status.temperature }}){% endif %}</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Limitations</h2>
+    <ul class="clean-list">
+      <li>Low-resolution or heavily compressed images can reduce reliability.</li>
+      <li>Unseen generators and new manipulation methods may not generalize well.</li>
+      <li>This system is a research prototype and should not be treated as legal proof.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Benchmark Snapshot</h2>
+  {% if latest_report %}
+    <ul class="clean-list">
+      <li>Accuracy: {{ latest_report.accuracy }}%</li>
+      <li>Precision: {{ latest_report.ai_metrics.precision }}%</li>
+      <li>Recall: {{ latest_report.ai_metrics.recall }}%</li>
+      <li>ROC-AUC: {{ latest_report.roc_auc if latest_report.roc_auc is not none else "N/A" }}{% if latest_report.roc_auc is not none %}%{% endif %}</li>
+      <li>Generated at: {{ latest_report.generated_at }}</li>
+    </ul>
+  {% else %}
+    <p class="muted">No benchmark report is stored yet. Run evaluation after training on a labeled dataset.</p>
+  {% endif %}
+</section>
+{% endblock %}

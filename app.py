@@ -101,17 +101,17 @@ def current_user():
 
 def detector_status_label(detector):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
-        return "Trained"
+        return "Trained Model"
     if detector.get("status") == "error":
-        return "Fallback"
-    return "Demo"
+        return "Fallback Mode"
+    return "Demo Mode"
 
 
 def detector_status_note(detector):
     label = detector_status_label(detector)
-    if label == "Trained":
+    if label == "Trained Model":
         return "Checkpoint loaded with calibrated scoring."
-    if label == "Fallback":
+    if label == "Fallback Mode":
         return "Checkpoint unavailable or incompatible, so the demo fallback is active."
     return "Prototype heuristic mode is active until a trained checkpoint is available."
 
@@ -339,11 +339,11 @@ def enrich_analysis(analysis):
     )
     analysis_mode = analysis.get("analysis_mode")
     if analysis_mode == "trained_model":
-        model_status = "Trained"
+        model_status = "Trained Model"
     elif "fallback" in str(analysis.get("inference_engine") or "").lower():
-        model_status = "Fallback"
+        model_status = "Fallback Mode"
     else:
-        model_status = "Demo"
+        model_status = "Demo Mode"
     analysis["detector_badge"] = model_status
     analysis["model_status_label"] = model_status
     analysis["face_detected"] = "Yes" if int(analysis.get("face_count") or 0) > 0 else "No"
@@ -353,8 +353,10 @@ def enrich_analysis(analysis):
     analysis["metadata_found"] = "Yes" if analysis["metadata_summary"].get("exif_present") else "No"
     analysis["analysis_reasons"] = analysis_reasons(analysis)
     analysis["fraud_score"], analysis["risk_level"] = fraud_score_and_risk(analysis)
-    display_prediction, display_risk = final_label((analysis.get("fake_prob") or 0.0) / 100.0)
-    analysis["display_prediction"] = display_prediction
+    _display_prediction, display_risk = final_label((analysis.get("fake_prob") or 0.0) / 100.0)
+    analysis["display_prediction"] = (
+        str(analysis.get("prediction") or "").replace("AI-Generated", "AI Generated")
+    )
     analysis["display_risk_level"] = display_risk
     analysis["prototype_notice"] = "This is not legal proof, only AI-assisted analysis."
     return analysis
@@ -554,6 +556,16 @@ def home():
         "home.html",
         title="Home",
         demo_samples=list_demo_samples(),
+        latest_report=load_latest_evaluation(),
+    )
+
+
+@app.route("/model")
+def model_page():
+    return render_template(
+        "model.html",
+        title="Model Details",
+        detector_status=detector_descriptor(),
         latest_report=load_latest_evaluation(),
     )
 

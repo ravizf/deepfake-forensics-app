@@ -89,6 +89,7 @@
     <li>Recall: {{ latest_report.ai_metrics.recall if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
     <li>Limitations: This prototype can still misclassify difficult real or synthetic images and should not be treated as legal proof.</li>
   </ul>
+  <a class="ghost-link" href="{{ url_for('model_page') }}">Open Model / Dataset Page</a>
 </section>
 
 <section class="panel">

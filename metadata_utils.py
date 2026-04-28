@@ -6,6 +6,11 @@ import os
 
 from PIL import Image, UnidentifiedImageError
 
+try:
+    import exifread
+except ImportError:  # pragma: no cover - optional dependency
+    exifread = None
+
 
 def extract_media_metadata(path, media_type="image", file_sha256=None):
     metadata = {
@@ -26,6 +31,20 @@ def extract_media_metadata(path, media_type="image", file_sha256=None):
     if not path or not os.path.exists(path):
         metadata["warning"] = "Source file was not available for metadata inspection."
         return metadata
+
+    if exifread is not None:
+        try:
+            with open(path, "rb") as stream:
+                tags = exifread.process_file(stream, details=False)
+            if tags:
+                metadata["exif_present"] = True
+                metadata["camera_make"] = str(tags.get("Image Make") or metadata["camera_make"] or "")
+                metadata["camera_model"] = str(
+                    tags.get("Image Model") or metadata["camera_model"] or ""
+                )
+                metadata["software"] = str(tags.get("Image Software") or metadata["software"] or "")
+        except Exception:
+            pass
 
     try:
         with Image.open(path) as image:

@@ -20,6 +20,7 @@
     </a>
     <nav class="site-nav">
       <a href="{{ url_for('home') }}">Home</a>
+      <a href="{{ url_for('model_page') }}">Model</a>
       {% if current_user %}
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
         <a href="{{ url_for('upload_page') }}">Upload</a>

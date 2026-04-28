@@ -6,3 +6,6 @@ requests
 gunicorn
 torch
 torchvision
+opencv-python
+fpdf
+exifread

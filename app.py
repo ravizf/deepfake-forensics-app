@@ -88,7 +88,7 @@ for folder in (
 
 init_db()
 
-DEMO_SAMPLE_ROOT = Path(app.root_path) / "dataset" / "test"
+DEMO_SAMPLE_ROOT = Path(app.root_path) / "static" / "demo-samples"
 DEMO_SAMPLE_LIMIT_PER_CLASS = 2
 
 
@@ -99,18 +99,22 @@ def current_user():
     return get_user_by_id(user_id)
 
 
-def detector_status_label(detector):
+def detector_status_label(detector, benchmark_report=None):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
+        if not benchmark_report:
+            return "Prototype trained checkpoint / evaluation pending"
         return "Trained Model"
     if detector.get("status") == "error":
         return "Fallback Mode"
     return "Demo Mode"
 
 
-def detector_status_note(detector):
-    label = detector_status_label(detector)
+def detector_status_note(detector, benchmark_report=None):
+    label = detector_status_label(detector, benchmark_report)
     if label == "Trained Model":
         return "Checkpoint loaded with calibrated scoring."
+    if label == "Prototype trained checkpoint / evaluation pending":
+        return "Checkpoint is loaded, but benchmark metrics have not been published yet."
     if label == "Fallback Mode":
         return "Checkpoint unavailable or incompatible, so the demo fallback is active."
     return "Prototype heuristic mode is active until a trained checkpoint is available."
@@ -134,6 +138,10 @@ def list_demo_samples():
                     "title": title,
                     "filename": path.name,
                     "path": path,
+                    "preview_url": url_for(
+                        "static",
+                        filename=f"demo-samples/{label}/{path.name}",
+                    ),
                 }
             )
     return samples
@@ -144,6 +152,31 @@ def get_demo_sample(sample_id):
         if sample["id"] == sample_id:
             return sample
     return None
+
+
+def benchmark_summary(report, detector=None):
+    if not report:
+        dataset_name = None
+        if detector:
+            dataset_name = detector.get("dataset_version")
+        return {
+            "accuracy": "Evaluation pending",
+            "precision": "Evaluation pending",
+            "recall": "Evaluation pending",
+            "f1_score": "Evaluation pending",
+            "test_dataset": dataset_name or "Evaluation pending",
+        }
+
+    precision = float(report.get("ai_metrics", {}).get("precision") or 0.0)
+    recall = float(report.get("ai_metrics", {}).get("recall") or 0.0)
+    f1_score = 0.0 if precision + recall == 0 else (2 * precision * recall) / (precision + recall)
+    return {
+        "accuracy": f"{report.get('accuracy')}%",
+        "precision": f"{precision}%",
+        "recall": f"{recall}%",
+        "f1_score": f"{round(f1_score, 2)}%",
+        "test_dataset": report.get("dataset_version") or detector.get("dataset_version") or "Not declared",
+    }
 
 
 def image_quality_warning(analysis):
@@ -254,12 +287,13 @@ def load_user():
 @app.context_processor
 def inject_globals():
     active_detector = detector_descriptor()
+    latest_report = load_latest_evaluation()
     return {
         "current_user": g.get("current_user"),
         "app_name": "SnapTrace Forensics",
         "active_detector": active_detector,
-        "active_detector_label": detector_status_label(active_detector),
-        "active_detector_note": detector_status_note(active_detector),
+        "active_detector_label": detector_status_label(active_detector, latest_report),
+        "active_detector_note": detector_status_note(active_detector, latest_report),
     }
 
 
@@ -338,8 +372,13 @@ def enrich_analysis(analysis):
         "api_source_attribution", analysis_id=analysis["analysis_id"]
     )
     analysis_mode = analysis.get("analysis_mode")
+    latest_report = load_latest_evaluation()
     if analysis_mode == "trained_model":
-        model_status = "Trained Model"
+        model_status = (
+            "Trained Model"
+            if latest_report
+            else "Prototype trained checkpoint / evaluation pending"
+        )
     elif "fallback" in str(analysis.get("inference_engine") or "").lower():
         model_status = "Fallback Mode"
     else:
@@ -552,21 +591,27 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
 
 @app.route("/")
 def home():
+    latest_report = load_latest_evaluation()
+    active_detector = detector_descriptor()
     return render_template(
         "home.html",
         title="Home",
         demo_samples=list_demo_samples(),
-        latest_report=load_latest_evaluation(),
+        latest_report=latest_report,
+        benchmark_summary=benchmark_summary(latest_report, active_detector),
     )
 
 
 @app.route("/model")
 def model_page():
+    latest_report = load_latest_evaluation()
+    detector_status = detector_descriptor()
     return render_template(
         "model.html",
         title="Model Details",
-        detector_status=detector_descriptor(),
-        latest_report=load_latest_evaluation(),
+        detector_status=detector_status,
+        latest_report=latest_report,
+        benchmark_summary=benchmark_summary(latest_report, detector_status),
     )
 
 

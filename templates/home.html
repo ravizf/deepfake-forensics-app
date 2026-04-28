@@ -68,6 +68,7 @@
       {% for sample in demo_samples %}
         <article class="panel demo-card">
           <p class="eyebrow">{{ sample.title }}</p>
+          <img src="{{ sample.preview_url }}" alt="{{ sample.filename }}">
           <h3>{{ sample.filename }}</h3>
           <p class="muted">Runs through the public prototype flow and opens the result page directly.</p>
           <a class="button-link" href="{{ url_for('run_demo_sample', sample_id=sample.id) }}">Analyze Demo Sample</a>
@@ -82,11 +83,12 @@
 <section class="panel">
   <h2>Dataset / Model Page Summary</h2>
   <ul class="clean-list">
-    <li>Dataset Used: {{ active_detector.dataset_version or "Not declared in active manifest" }}</li>
+    <li>Dataset Used: {{ benchmark_summary.test_dataset }}</li>
     <li>Model Architecture: {{ active_detector.architecture or "Not declared in active manifest" }}</li>
-    <li>Accuracy: {{ latest_report.accuracy if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
-    <li>Precision: {{ latest_report.ai_metrics.precision if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
-    <li>Recall: {{ latest_report.ai_metrics.recall if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
+    <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
+    <li>Precision: {{ benchmark_summary.precision }}</li>
+    <li>Recall: {{ benchmark_summary.recall }}</li>
+    <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
     <li>Limitations: This prototype can still misclassify difficult real or synthetic images and should not be treated as legal proof.</li>
   </ul>
   <a class="ghost-link" href="{{ url_for('model_page') }}">Open Model / Dataset Page</a>

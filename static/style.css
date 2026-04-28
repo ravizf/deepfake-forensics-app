@@ -295,6 +295,15 @@ button {
   margin: 0.25rem 0 0.75rem;
 }
 
+.demo-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 1rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid rgba(168, 192, 216, 0.18);
+}
+
 .form-card {
   display: grid;
   gap: 0.8rem;

@@ -11,7 +11,7 @@ def final_label(fake_score: float):
     """Map a normalized fake score to a user-facing label and risk tier."""
     fake_score = _clamp01(fake_score)
     if fake_score >= 0.70:
-        return "AI Generated", "High"
+        return "Fake", "High"
     if fake_score <= 0.30:
         return "Real", "Low"
     return "Uncertain", "Medium"

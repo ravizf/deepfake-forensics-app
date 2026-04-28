@@ -9,8 +9,8 @@
   </div>
   <div class="hero-actions">
     <a class="button-link" href="{{ analysis.evidence_url }}">Visual Explanation</a>
-    {% if not public_demo and analysis.report_url %}
-      <a class="ghost-link" href="{{ analysis.report_url }}">Open Report</a>
+    {% if not public_demo and analysis.report_download_url %}
+      <a class="ghost-link" href="{{ analysis.report_download_url }}">Download Report</a>
     {% endif %}
   </div>
 </section>
@@ -23,8 +23,8 @@
   <article class="metric-card"><span>Fraud Score</span><strong>{{ analysis.fraud_score }}/100</strong></article>
   <article class="metric-card"><span>Risk</span><strong>{{ analysis.risk_level }}</strong></article>
   <article class="metric-card"><span>Model Status</span><strong>{{ analysis.model_status_label }}</strong></article>
+  <article class="metric-card"><span>Metadata Found</span><strong>{{ analysis.metadata_found }}</strong></article>
   <article class="metric-card"><span>Detector Name</span><strong>{{ analysis.inference_engine }}</strong></article>
-  <article class="metric-card"><span>Analysis Mode</span><strong>{{ analysis.analysis_mode }}</strong></article>
   <article class="metric-card"><span>Face Detected</span><strong>{{ analysis.face_detected }}</strong></article>
   <article class="metric-card"><span>Review Status</span><strong>{{ analysis.review_status or "Pending" }}</strong></article>
   <article class="metric-card"><span>AI Score</span><strong>{{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</strong></article>

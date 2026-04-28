@@ -2,14 +2,14 @@
 {% block content %}
 <section class="hero">
   <div class="hero-copy">
-    <p class="eyebrow">AI-Assisted Prototype</p>
+    <p class="eyebrow">Research Prototype</p>
     <h1>SnapTrace Forensics</h1>
     <p class="lead">
       AI-assisted deepfake image analysis platform.
     </p>
     <p class="lead">
-      Upload an image and receive a forensic-style analysis with prediction, confidence score,
-      metadata inspection, heatmap-style visual evidence, and downloadable reports.
+      Upload an image, get real/fake prediction, confidence score, metadata check,
+      visual evidence, and forensic-style report.
       This system is a research prototype and should not be treated as legal proof.
     </p>
     <div class="status-strip">
@@ -21,7 +21,7 @@
         <a class="button-link" href="{{ url_for('upload_page') }}">Start New Analysis</a>
         <a class="ghost-link" href="{{ url_for('dashboard') }}">Open Dashboard</a>
       {% else %}
-        <a class="button-link" href="#demo-samples">Try Demo</a>
+        <a class="button-link" href="#demo-samples">Try Demo Without Login</a>
         <a class="button-link" href="{{ url_for('register') }}">Create Account</a>
         <a class="ghost-link" href="{{ url_for('login') }}">Sign In</a>
       {% endif %}
@@ -29,61 +29,37 @@
   </div>
   <div class="hero-panel">
     <div class="metric-card">
-      <span>Prototype Scope</span>
-      <strong>Confidence score, visual explanation, PDF-style report, case history, and admin review</strong>
+      <span>Prediction</span>
+      <strong>Real / Fake / Uncertain</strong>
     </div>
     <div class="metric-card">
-      <span>Current Model Status</span>
+      <span>Model Status</span>
       <strong>{{ active_detector_label }}</strong>
     </div>
     <div class="metric-card">
-      <span>ML Module</span>
-      <strong>Face detection, confidence scoring, prototype heatmap explanation, and thresholded decisions</strong>
+      <span>Outputs</span>
+      <strong>Confidence, metadata check, visual evidence, and report</strong>
     </div>
   </div>
 </section>
 
 <section class="grid three-up">
   <article class="panel">
-    <h2>Case Intake</h2>
-    <p>Upload suspicious media, capture file metadata, and preserve a basic prototype chain of custody.</p>
+    <h2>Upload</h2>
+    <p>Analyze suspicious images with the trained model or prototype fallback.</p>
   </article>
   <article class="panel">
-    <h2>Analysis Results</h2>
-    <p>Review Real / AI-generated / Uncertain predictions, confidence, face detection status, and evidence notes.</p>
+    <h2>Inspect</h2>
+    <p>See confidence score, face detection, metadata check, and heatmap-style evidence.</p>
   </article>
   <article class="panel">
-    <h2>Forensic Reporting</h2>
-    <p>Generate downloadable prototype reports and maintain searchable investigation history for analysts.</p>
+    <h2>Report</h2>
+    <p>Download a forensic-style prototype report and review history in the dashboard.</p>
   </article>
-</section>
-
-<section class="panel">
-  <h2>Model and Dataset Transparency</h2>
-  <div class="grid two-up">
-    <div>
-      <h3>Recommended Training Data</h3>
-      <ul class="clean-list">
-        <li>FaceForensics++ for manipulated face-video/image extraction workflows</li>
-        <li>Celeb-DF for challenging deepfake face examples</li>
-        <li>Balanced real-photo sets with selfies, compression, blur, and low-light scenes</li>
-      </ul>
-    </div>
-    <div>
-      <h3>Live Detector Status</h3>
-      <ul class="clean-list">
-        <li>Model status: {{ active_detector_label }}</li>
-        <li>Model architecture: {{ active_detector.architecture or "N/A" }}</li>
-        <li>Detector version: {{ active_detector.detector_version }}</li>
-        <li>Model version: {{ active_detector.model_version or "N/A" }}</li>
-        <li>Dataset version: {{ active_detector.dataset_version or "N/A" }}</li>
-      </ul>
-    </div>
-  </div>
 </section>
 
 <section class="panel" id="demo-samples">
-  <h2>Try Demo</h2>
+  <h2>Try Demo Without Login</h2>
   <p class="lead">
     Reviewers can test sample images without creating an account. Uploading your own files still requires login.
   </p>
@@ -104,30 +80,6 @@
 </section>
 
 <section class="panel">
-  <h2>API Access</h2>
-  <p class="lead">
-    Product-style prediction access is available through <code>POST /predict</code> and the demo upload flow.
-    Send a file field named <code>file</code> to receive prediction, confidence, fraud score, risk level,
-    metadata check, and visual explanation link.
-  </p>
-</section>
-
-<section class="panel">
-  <h2>Evaluation Snapshot</h2>
-  {% if latest_report %}
-    <div class="grid four-up">
-      <article class="metric-card"><span>Accuracy</span><strong>{{ latest_report.accuracy }}%</strong></article>
-      <article class="metric-card"><span>ROC-AUC</span><strong>{{ latest_report.roc_auc if latest_report.roc_auc is not none else "N/A" }}{% if latest_report.roc_auc is not none %}%{% endif %}</strong></article>
-      <article class="metric-card"><span>AI Precision</span><strong>{{ latest_report.ai_metrics.precision }}%</strong></article>
-      <article class="metric-card"><span>Real Precision</span><strong>{{ latest_report.real_metrics.precision }}%</strong></article>
-    </div>
-    <p class="muted">Latest benchmark run: {{ latest_report.generated_at }}. Full details are on the evaluation page.</p>
-  {% else %}
-    <p class="muted">No benchmark report is stored yet. Run evaluation after training on a labeled dataset.</p>
-  {% endif %}
-</section>
-
-<section class="panel">
   <h2>Dataset / Model Page Summary</h2>
   <ul class="clean-list">
     <li>Dataset Used: {{ active_detector.dataset_version or "Not declared in active manifest" }}</li>
@@ -137,64 +89,6 @@
     <li>Recall: {{ latest_report.ai_metrics.recall if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
     <li>Limitations: This prototype can still misclassify difficult real or synthetic images and should not be treated as legal proof.</li>
   </ul>
-</section>
-
-<section class="panel">
-  <h2>System Overview</h2>
-  <div class="grid two-up">
-    <div>
-      <h3>Core Pages</h3>
-      <ul class="clean-list">
-        <li>Login / Register</li>
-        <li>Home / Dashboard</li>
-        <li>Upload and Analysis Result</li>
-        <li>Heatmap / Visual Evidence</li>
-        <li>Report and History</li>
-        <li>Admin Monitoring Panel</li>
-      </ul>
-    </div>
-    <div>
-      <h3>Tracked Data</h3>
-      <ul class="clean-list">
-        <li>User details and roles</li>
-        <li>Uploaded file metadata</li>
-        <li>Prediction result and confidence</li>
-        <li>Prototype evidence notes and visual explanation</li>
-        <li>Generated prototype reports</li>
-        <li>Audit logs and custody events</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section class="panel">
-  <h2>Main Pages of the Web App</h2>
-  <div class="grid two-up">
-    <article>
-      <h3>Home Page</h3>
-      <p>Introduces the project and explains its purpose.</p>
-    </article>
-    <article>
-      <h3>Upload Page</h3>
-      <p>Allows users to upload suspicious images or videos.</p>
-    </article>
-    <article>
-      <h3>Analysis Result Page</h3>
-      <p>Displays whether the media is Real, AI-generated, or Uncertain, with confidence score and explanation.</p>
-    </article>
-    <article>
-      <h3>Heatmap Page</h3>
-      <p>Shows a prototype visual explanation heatmap.</p>
-    </article>
-    <article>
-      <h3>Report Page</h3>
-      <p>Generates a downloadable forensic report.</p>
-    </article>
-    <article>
-      <h3>History Page</h3>
-      <p>Displays previously analyzed records.</p>
-    </article>
-  </div>
 </section>
 
 <section class="panel">

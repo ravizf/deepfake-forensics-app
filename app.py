@@ -101,17 +101,17 @@ def current_user():
 
 def detector_status_label(detector):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
-        return "Trained Model"
+        return "Trained"
     if detector.get("status") == "error":
-        return "Fallback Mode"
-    return "Demo Mode"
+        return "Fallback"
+    return "Demo"
 
 
 def detector_status_note(detector):
     label = detector_status_label(detector)
-    if label == "Trained Model":
+    if label == "Trained":
         return "Checkpoint loaded with calibrated scoring."
-    if label == "Fallback Mode":
+    if label == "Fallback":
         return "Checkpoint unavailable or incompatible, so the demo fallback is active."
     return "Prototype heuristic mode is active until a trained checkpoint is available."
 
@@ -338,12 +338,14 @@ def enrich_analysis(analysis):
         "api_source_attribution", analysis_id=analysis["analysis_id"]
     )
     analysis_mode = analysis.get("analysis_mode")
-    analysis["detector_badge"] = (
-        "Trained Model" if analysis_mode == "trained_model" else "Demo Mode"
-    )
-    analysis["model_status_label"] = (
-        "Trained Model" if analysis_mode == "trained_model" else "Demo Mode"
-    )
+    if analysis_mode == "trained_model":
+        model_status = "Trained"
+    elif "fallback" in str(analysis.get("inference_engine") or "").lower():
+        model_status = "Fallback"
+    else:
+        model_status = "Demo"
+    analysis["detector_badge"] = model_status
+    analysis["model_status_label"] = model_status
     analysis["face_detected"] = "Yes" if int(analysis.get("face_count") or 0) > 0 else "No"
     analysis["image_quality_warning"] = image_quality_warning(analysis)
     analysis["metadata_check"] = metadata_check_text(analysis)

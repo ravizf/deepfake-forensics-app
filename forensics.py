@@ -261,6 +261,7 @@ def detector_descriptor():
     if model is not None and meta is not None and not meta.get("load_error"):
         return {
             "engine": meta["name"],
+            "architecture": meta.get("architecture"),
             "detector_version": meta["detector_version"],
             "model_version": meta.get("model_version"),
             "dataset_version": meta.get("dataset_version"),
@@ -276,6 +277,7 @@ def detector_descriptor():
     if meta is not None and meta.get("load_error"):
         return {
             "engine": meta["name"],
+            "architecture": meta.get("architecture"),
             "detector_version": FALLBACK_DETECTOR_VERSION,
             "mode": "fallback_demo",
             "status": "error",
@@ -1068,8 +1070,8 @@ def generate_report_document(analysis, audit_trail, report_dir):
       <div><strong>Report ID</strong><br>{html.escape(str(analysis.get('report_id') or 'Pending'))}</div>
       <div><strong>Analyst</strong><br>{html.escape(analysis['full_name'])}</div>
       <div><strong>File</strong><br>{html.escape(analysis['original_filename'])}</div>
-      <div><strong>Prediction</strong><br>{html.escape(analysis['prediction'])}</div>
-      <div><strong>Binary Result</strong><br>{html.escape(analysis.get('binary_prediction') or analysis['prediction'])}</div>
+      <div><strong>Prediction</strong><br>{html.escape(analysis.get('display_prediction') or analysis['prediction'])}</div>
+      <div><strong>Binary Result</strong><br>{html.escape(analysis.get('display_prediction') or analysis.get('binary_prediction') or analysis['prediction'])}</div>
       <div><strong>Confidence</strong><br>{analysis['confidence']}%</div>
       <div><strong>Fraud Score</strong><br>{html.escape(str(analysis.get('fraud_score', 'N/A')))} / 100</div>
       <div><strong>Risk Level</strong><br>{html.escape(analysis.get('risk_level') or 'N/A')}</div>

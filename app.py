@@ -54,13 +54,15 @@ from evaluation import (
     load_latest_evaluation,
     run_evaluation,
 )
+from inference_engine import final_label
+from metadata_utils import extract_media_metadata as read_media_metadata
+from model_loader import detector_descriptor
 from forensics import (
     allowed_file,
     analyze_media_file,
-    detector_descriptor,
-    generate_report_document,
     infer_media_type,
 )
+from report_generator import generate_downloadable_report
 
 
 app = Flask(__name__)
@@ -157,38 +159,11 @@ def image_quality_warning(analysis):
 
 
 def extract_media_metadata(analysis):
-    metadata = {
-        "media_type": analysis.get("media_type"),
-        "file_sha256_present": bool(analysis.get("file_sha256")),
-        "exif_present": False,
-        "camera_make": None,
-        "camera_model": None,
-        "software": None,
-        "image_size": None,
-        "warning": None,
-    }
-    if analysis.get("media_type") != "image":
-        metadata["warning"] = "EXIF inspection is limited for video files in this prototype."
-        return metadata
-
-    stored_path = analysis.get("stored_path")
-    if not stored_path or not os.path.exists(stored_path):
-        metadata["warning"] = "Source file was not available for metadata inspection."
-        return metadata
-
-    try:
-        with Image.open(stored_path) as image:
-            metadata["image_size"] = f"{image.width}x{image.height}"
-            exif_data = image.getexif()
-            if exif_data:
-                metadata["exif_present"] = True
-                metadata["camera_make"] = exif_data.get(271)
-                metadata["camera_model"] = exif_data.get(272)
-                metadata["software"] = exif_data.get(305)
-    except (UnidentifiedImageError, OSError, ValueError):
-        metadata["warning"] = "Image metadata could not be read reliably."
-
-    return metadata
+    return read_media_metadata(
+        analysis.get("stored_path"),
+        media_type=analysis.get("media_type"),
+        file_sha256=analysis.get("file_sha256"),
+    )
 
 
 def metadata_check_text(analysis):
@@ -244,12 +219,7 @@ def analysis_reasons(analysis):
 def fraud_score_and_risk(analysis):
     score = float(analysis.get("fake_prob") or 0.0)
     score = max(0.0, min(100.0, score))
-    if score >= 80:
-        risk = "HIGH"
-    elif score >= 55:
-        risk = "MEDIUM"
-    else:
-        risk = "LOW"
+    _, risk = final_label(score / 100.0)
     return round(score, 2), risk
 
 
@@ -378,8 +348,12 @@ def enrich_analysis(analysis):
     analysis["image_quality_warning"] = image_quality_warning(analysis)
     analysis["metadata_check"] = metadata_check_text(analysis)
     analysis["metadata_summary"] = extract_media_metadata(analysis)
+    analysis["metadata_found"] = "Yes" if analysis["metadata_summary"].get("exif_present") else "No"
     analysis["analysis_reasons"] = analysis_reasons(analysis)
     analysis["fraud_score"], analysis["risk_level"] = fraud_score_and_risk(analysis)
+    display_prediction, display_risk = final_label((analysis.get("fake_prob") or 0.0) / 100.0)
+    analysis["display_prediction"] = display_prediction
+    analysis["display_risk_level"] = display_risk
     analysis["prototype_notice"] = "This is not legal proof, only AI-assisted analysis."
     return analysis
 
@@ -387,7 +361,9 @@ def enrich_analysis(analysis):
 def build_analysis_response(analysis):
     return {
         "analysis_id": analysis["analysis_id"],
-        "prediction": analysis["prediction"],
+        "prediction": analysis.get("display_prediction") or analysis["prediction"],
+        "raw_prediction": analysis["prediction"],
+        "display_prediction": analysis.get("display_prediction"),
         "binary_prediction": analysis.get("binary_prediction"),
         "leaning_prediction": analysis.get("leaning_prediction"),
         "confidence": analysis["confidence"],
@@ -398,9 +374,10 @@ def build_analysis_response(analysis):
         "image_quality_warning": analysis.get("image_quality_warning"),
         "metadata_check": analysis.get("metadata_check"),
         "metadata_summary": analysis.get("metadata_summary"),
+        "metadata_found": analysis.get("metadata_found"),
         "analysis_reasons": analysis.get("analysis_reasons"),
         "fraud_score": analysis.get("fraud_score"),
-        "risk_level": analysis.get("risk_level"),
+        "risk_level": analysis.get("display_risk_level") or analysis.get("risk_level"),
         "prototype_notice": analysis.get("prototype_notice"),
         "fake_prob": analysis.get("fake_prob"),
         "real_prob": analysis.get("real_prob"),
@@ -467,7 +444,7 @@ def ensure_report_record(analysis):
     audit_trail = get_case_audit_logs(
         upload_id=analysis["upload_id"], analysis_id=analysis["analysis_id"]
     )
-    report_path = generate_report_document(
+    report_path = generate_downloadable_report(
         analysis=analysis,
         audit_trail=audit_trail,
         report_dir=app.config["REPORT_FOLDER"],
@@ -536,7 +513,7 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
         analysis = enrich_analysis(get_analysis_detail(analysis_id))
         try:
             audit_trail = get_case_audit_logs(upload_id=upload_id, analysis_id=analysis_id)
-            report_path = generate_report_document(
+            report_path = generate_downloadable_report(
                 analysis=analysis,
                 audit_trail=audit_trail,
                 report_dir=app.config["REPORT_FOLDER"],
@@ -867,11 +844,13 @@ def api_predict():
         return jsonify(
             {
                 "prediction": payload["prediction"],
+                "raw_prediction": payload.get("raw_prediction"),
                 "binary_prediction": payload.get("binary_prediction"),
                 "confidence": payload["confidence"],
                 "fraud_score": payload.get("fraud_score"),
                 "risk_level": payload.get("risk_level"),
                 "face_detected": payload.get("face_detected"),
+                "metadata_found": payload.get("metadata_found"),
                 "image_quality_warning": payload.get("image_quality_warning"),
                 "metadata_check": payload.get("metadata_check"),
                 "analysis_reasons": payload.get("analysis_reasons"),

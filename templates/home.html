@@ -3,11 +3,14 @@
 <section class="hero">
   <div class="hero-copy">
     <p class="eyebrow">AI-Assisted Prototype</p>
-    <h1>SnapTrace Forensics — AI-Assisted Deepfake Image Detection Platform</h1>
+    <h1>SnapTrace Forensics</h1>
     <p class="lead">
-      Upload an image, analyze facial manipulation signals, view confidence scores, visual explanations,
-      metadata notes, and generate a forensic-style report. This is a prototype forensic analysis workflow,
-      not a claim of legal proof.
+      AI-assisted deepfake image analysis platform.
+    </p>
+    <p class="lead">
+      Upload an image and receive a forensic-style analysis with prediction, confidence score,
+      metadata inspection, heatmap-style visual evidence, and downloadable reports.
+      This system is a research prototype and should not be treated as legal proof.
     </p>
     <div class="status-strip">
       <span class="status-pill">Model: {{ active_detector_label }}</span>
@@ -70,6 +73,7 @@
       <h3>Live Detector Status</h3>
       <ul class="clean-list">
         <li>Model status: {{ active_detector_label }}</li>
+        <li>Model architecture: {{ active_detector.architecture or "N/A" }}</li>
         <li>Detector version: {{ active_detector.detector_version }}</li>
         <li>Model version: {{ active_detector.model_version or "N/A" }}</li>
         <li>Dataset version: {{ active_detector.dataset_version or "N/A" }}</li>
@@ -121,6 +125,18 @@
   {% else %}
     <p class="muted">No benchmark report is stored yet. Run evaluation after training on a labeled dataset.</p>
   {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Dataset / Model Page Summary</h2>
+  <ul class="clean-list">
+    <li>Dataset Used: {{ active_detector.dataset_version or "Not declared in active manifest" }}</li>
+    <li>Model Architecture: {{ active_detector.architecture or "Not declared in active manifest" }}</li>
+    <li>Accuracy: {{ latest_report.accuracy if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
+    <li>Precision: {{ latest_report.ai_metrics.precision if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
+    <li>Recall: {{ latest_report.ai_metrics.recall if latest_report else "N/A" }}{% if latest_report %}%{% endif %}</li>
+    <li>Limitations: This prototype can still misclassify difficult real or synthetic images and should not be treated as legal proof.</li>
+  </ul>
 </section>
 
 <section class="panel">

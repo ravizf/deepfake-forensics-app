@@ -20,6 +20,9 @@
   <h2>Active Detector</h2>
   <ul class="clean-list">
     <li>Engine: {{ detector_status.engine }}</li>
+    {% if detector_status.architecture %}
+      <li>Architecture: {{ detector_status.architecture }}</li>
+    {% endif %}
     <li>Version: {{ detector_status.detector_version }}</li>
     {% if detector_status.model_version %}
       <li>Model version: {{ detector_status.model_version }}</li>
@@ -77,6 +80,7 @@
     <li>Train a CNN backbone such as EfficientNet-B0 or ResNet with balanced real-photo examples.</li>
     <li>Export the checkpoint as <code>deepfake_model.pth</code> and keep <code>model_manifest.json</code> aligned with the architecture.</li>
     <li>Threshold target: fake above 0.7, real below 0.3, and uncertain between those bands if you choose a stricter three-way policy.</li>
+    <li>Limitation: until those datasets are actually trained into the checkpoint, the app remains a research prototype.</li>
   </ul>
 </section>
 

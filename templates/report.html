@@ -14,8 +14,8 @@
     <ul class="clean-list">
       <li>Report ID: {{ analysis.report_id or "pending" }}</li>
       <li>File: {{ analysis.original_filename }}</li>
-      <li>Prediction: {{ analysis.prediction }}</li>
-      <li>Binary Result: {{ analysis.binary_prediction or analysis.prediction }}</li>
+      <li>Prediction: {{ analysis.display_prediction or analysis.prediction }}</li>
+      <li>Binary Result: {{ analysis.display_prediction or analysis.binary_prediction or analysis.prediction }}</li>
       <li>Confidence: {{ analysis.confidence }}%</li>
       <li>Fraud score: {{ analysis.fraud_score }}/100</li>
       <li>Risk level: {{ analysis.risk_level }}</li>
@@ -24,6 +24,7 @@
       <li>AI score: {{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</li>
       <li>Real score: {{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</li>
       <li>Face detected: {{ analysis.face_detected }}</li>
+      <li>Metadata found: {{ analysis.metadata_found }}</li>
       <li>Detector: {{ analysis.inference_engine }}</li>
       <li>Detector version: {{ analysis.detector_version }}</li>
       <li>Model version: {{ analysis.model_version or "N/A" }}</li>

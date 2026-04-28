@@ -16,8 +16,8 @@
 </section>
 
 <section class="grid four-up">
-  <article class="metric-card"><span>Prediction</span><strong>{{ analysis.prediction }}</strong></article>
-  <article class="metric-card"><span>Binary Result</span><strong>{{ analysis.binary_prediction or analysis.prediction }}</strong></article>
+  <article class="metric-card"><span>Prediction</span><strong>{{ analysis.display_prediction or analysis.prediction }}</strong></article>
+  <article class="metric-card"><span>Binary Result</span><strong>{{ analysis.display_prediction or analysis.binary_prediction or analysis.prediction }}</strong></article>
   <article class="metric-card"><span>Confidence</span><strong>{{ analysis.confidence }}%</strong></article>
   <article class="metric-card"><span>Confidence Band</span><strong>{{ analysis.confidence_band or "N/A" }}</strong></article>
   <article class="metric-card"><span>Fraud Score</span><strong>{{ analysis.fraud_score }}/100</strong></article>
@@ -57,6 +57,7 @@
       <li>Uploaded by: {{ analysis.full_name }}</li>
       <li>Uploaded at: {{ analysis.uploaded_at }}</li>
       <li>Model status: {{ analysis.model_status_label }}</li>
+      <li>Model architecture: {{ active_detector.architecture or "N/A" }}</li>
       <li>Detector: {{ analysis.inference_engine }}</li>
       <li>Detector version: {{ analysis.detector_version }}</li>
       <li>Model version: {{ analysis.model_version or "N/A" }}</li>
@@ -64,7 +65,7 @@
       <li>Training date: {{ analysis.training_date or "N/A" }}</li>
       <li>Calibration: {{ analysis.calibration_method or "N/A" }}{% if analysis.temperature is not none %} (temperature={{ analysis.temperature }}){% endif %}</li>
       <li>Result type: {{ analysis.detector_badge }}</li>
-      <li>Binary result: {{ analysis.binary_prediction or analysis.prediction }}</li>
+      <li>Binary result: {{ analysis.display_prediction or analysis.binary_prediction or analysis.prediction }}</li>
       <li>Confidence band: {{ analysis.confidence_band or "N/A" }}</li>
       <li>Review status: {{ analysis.review_status or "N/A" }}</li>
       <li>Prototype source attribution estimate: {{ analysis.source_model }}</li>
@@ -76,6 +77,7 @@
       <li>Uncertainty score: {{ ((analysis.uncertainty_score or 0) * 100)|round(1) }}%</li>
       <li>Frequency score: {{ analysis.frequency_score }}</li>
       <li>Face detected: {{ analysis.face_detected }}</li>
+      <li>Metadata found: {{ analysis.metadata_found }}</li>
       <li>Face count: {{ analysis.face_count }}</li>
       <li>Face region analyzed: {{ analysis.face_strategy or "N/A" }}</li>
       <li>Image quality warning: {{ analysis.image_quality_warning }}</li>

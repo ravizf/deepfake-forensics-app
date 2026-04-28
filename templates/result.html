@@ -20,6 +20,8 @@
   <article class="metric-card"><span>Binary Result</span><strong>{{ analysis.binary_prediction or analysis.prediction }}</strong></article>
   <article class="metric-card"><span>Confidence</span><strong>{{ analysis.confidence }}%</strong></article>
   <article class="metric-card"><span>Confidence Band</span><strong>{{ analysis.confidence_band or "N/A" }}</strong></article>
+  <article class="metric-card"><span>Fraud Score</span><strong>{{ analysis.fraud_score }}/100</strong></article>
+  <article class="metric-card"><span>Risk</span><strong>{{ analysis.risk_level }}</strong></article>
   <article class="metric-card"><span>Model Status</span><strong>{{ analysis.model_status_label }}</strong></article>
   <article class="metric-card"><span>Detector Name</span><strong>{{ analysis.inference_engine }}</strong></article>
   <article class="metric-card"><span>Analysis Mode</span><strong>{{ analysis.analysis_mode }}</strong></article>
@@ -32,6 +34,12 @@
 <section class="grid two-up">
   <article class="panel">
     <h2>Why This Result?</h2>
+    <ul class="clean-list">
+      {% for item in analysis.analysis_reasons or [] %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+    <h3>Detailed Evidence</h3>
     <ul class="clean-list">
       {% for item in analysis.evidence_points %}
         <li>{{ item }}</li>
@@ -61,6 +69,8 @@
       <li>Review status: {{ analysis.review_status or "N/A" }}</li>
       <li>Prototype source attribution estimate: {{ analysis.source_model }}</li>
       <li>Leaning result: {{ analysis.leaning_prediction or analysis.prediction }}</li>
+      <li>Fraud score: {{ analysis.fraud_score }}/100</li>
+      <li>Risk level: {{ analysis.risk_level }}</li>
       <li>AI score: {{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</li>
       <li>Real score: {{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</li>
       <li>Uncertainty score: {{ ((analysis.uncertainty_score or 0) * 100)|round(1) }}%</li>

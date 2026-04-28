@@ -991,7 +991,7 @@ def analyze_media_file(file_path, media_type, heatmap_dir):
 
 def generate_report_document(analysis, audit_trail, report_dir):
     os.makedirs(report_dir, exist_ok=True)
-    report_name = f"forensic_report_{analysis['analysis_id']}.html"
+    report_name = f"prototype_report_{analysis['analysis_id']}.html"
     report_path = os.path.join(report_dir, report_name)
 
     evidence_items = "".join(
@@ -1061,7 +1061,7 @@ def generate_report_document(analysis, audit_trail, report_dir):
 </head>
 <body>
   <div class="shell">
-    <h1>SnapTrace Forensic Report</h1>
+    <h1>SnapTrace Prototype Forensic Report</h1>
     <p>Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC for case #{analysis['analysis_id']}.</p>
 
     <div class="meta">
@@ -1071,6 +1071,8 @@ def generate_report_document(analysis, audit_trail, report_dir):
       <div><strong>Prediction</strong><br>{html.escape(analysis['prediction'])}</div>
       <div><strong>Binary Result</strong><br>{html.escape(analysis.get('binary_prediction') or analysis['prediction'])}</div>
       <div><strong>Confidence</strong><br>{analysis['confidence']}%</div>
+      <div><strong>Fraud Score</strong><br>{html.escape(str(analysis.get('fraud_score', 'N/A')))} / 100</div>
+      <div><strong>Risk Level</strong><br>{html.escape(analysis.get('risk_level') or 'N/A')}</div>
       <div><strong>Confidence Band</strong><br>{html.escape(analysis.get('confidence_band') or 'N/A')}</div>
       <div><strong>Review Status</strong><br>{html.escape(analysis.get('review_status') or 'N/A')}</div>
       <div><strong>Real Score</strong><br>{analysis.get('real_prob', 0)}%</div>
@@ -1082,16 +1084,20 @@ def generate_report_document(analysis, audit_trail, report_dir):
       <div><strong>Training Date</strong><br>{html.escape(analysis.get('training_date') or 'N/A')}</div>
       <div><strong>Calibration</strong><br>{html.escape(analysis.get('calibration_method') or 'N/A')} ({analysis.get('temperature', 'N/A')})</div>
       <div><strong>Analysis Mode</strong><br>{html.escape(analysis.get('analysis_mode') or 'unknown')}</div>
+      <div><strong>Face Detected</strong><br>{html.escape(analysis.get('face_detected') or 'N/A')}</div>
       <div><strong>Face Count</strong><br>{html.escape(str(analysis.get('face_count', 0)))}</div>
       <div><strong>Upload Timestamp</strong><br>{html.escape(analysis.get('uploaded_at') or 'N/A')}</div>
       <div><strong>Analysis Timestamp</strong><br>{html.escape(analysis.get('created_at') or 'N/A')}</div>
       <div><strong>Report Timestamp</strong><br>{html.escape(analysis.get('generated_at') or 'Pending')}</div>
+      <div><strong>Metadata Check</strong><br>{html.escape(analysis.get('metadata_check') or 'N/A')}</div>
+      <div><strong>Image Quality Warning</strong><br>{html.escape(analysis.get('image_quality_warning') or 'N/A')}</div>
       <div><strong>SHA-256</strong><br><code>{html.escape(analysis.get('file_sha256') or 'Unavailable')}</code></div>
     </div>
 
     <div class="panel">
       <h2>Executive Summary</h2>
       <p>{html.escape(analysis['summary'])}</p>
+      <p><strong>Important Notice:</strong> {html.escape(analysis.get('prototype_notice') or 'This is not legal proof, only AI-assisted analysis.')}</p>
       <ul>{evidence_items}</ul>
     </div>
 

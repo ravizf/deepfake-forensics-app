@@ -70,6 +70,16 @@
   {% endif %}
 </section>
 
+<section class="panel">
+  <h2>Recommended Training Stack</h2>
+  <ul class="clean-list">
+    <li>Use labeled deepfake data such as FaceForensics++ and Celeb-DF when those datasets are available locally.</li>
+    <li>Train a CNN backbone such as EfficientNet-B0 or ResNet with balanced real-photo examples.</li>
+    <li>Export the checkpoint as <code>deepfake_model.pth</code> and keep <code>model_manifest.json</code> aligned with the architecture.</li>
+    <li>Threshold target: fake above 0.7, real below 0.3, and uncertain between those bands if you choose a stricter three-way policy.</li>
+  </ul>
+</section>
+
 {% if report %}
 <section class="grid five-up">
   <article class="metric-card"><span>Samples</span><strong>{{ report.sample_count }}</strong></article>

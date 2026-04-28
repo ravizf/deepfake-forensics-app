@@ -55,6 +55,29 @@
   </article>
 </section>
 
+<section class="panel">
+  <h2>Model and Dataset Transparency</h2>
+  <div class="grid two-up">
+    <div>
+      <h3>Recommended Training Data</h3>
+      <ul class="clean-list">
+        <li>FaceForensics++ for manipulated face-video/image extraction workflows</li>
+        <li>Celeb-DF for challenging deepfake face examples</li>
+        <li>Balanced real-photo sets with selfies, compression, blur, and low-light scenes</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Live Detector Status</h3>
+      <ul class="clean-list">
+        <li>Model status: {{ active_detector_label }}</li>
+        <li>Detector version: {{ active_detector.detector_version }}</li>
+        <li>Model version: {{ active_detector.model_version or "N/A" }}</li>
+        <li>Dataset version: {{ active_detector.dataset_version or "N/A" }}</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
 <section class="panel" id="demo-samples">
   <h2>Try Demo</h2>
   <p class="lead">
@@ -73,6 +96,30 @@
     </div>
   {% else %}
     <p class="muted">Demo samples are not installed in this deployment yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>API Access</h2>
+  <p class="lead">
+    Product-style prediction access is available through <code>POST /predict</code> and the demo upload flow.
+    Send a file field named <code>file</code> to receive prediction, confidence, fraud score, risk level,
+    metadata check, and visual explanation link.
+  </p>
+</section>
+
+<section class="panel">
+  <h2>Evaluation Snapshot</h2>
+  {% if latest_report %}
+    <div class="grid four-up">
+      <article class="metric-card"><span>Accuracy</span><strong>{{ latest_report.accuracy }}%</strong></article>
+      <article class="metric-card"><span>ROC-AUC</span><strong>{{ latest_report.roc_auc if latest_report.roc_auc is not none else "N/A" }}{% if latest_report.roc_auc is not none %}%{% endif %}</strong></article>
+      <article class="metric-card"><span>AI Precision</span><strong>{{ latest_report.ai_metrics.precision }}%</strong></article>
+      <article class="metric-card"><span>Real Precision</span><strong>{{ latest_report.real_metrics.precision }}%</strong></article>
+    </div>
+    <p class="muted">Latest benchmark run: {{ latest_report.generated_at }}. Full details are on the evaluation page.</p>
+  {% else %}
+    <p class="muted">No benchmark report is stored yet. Run evaluation after training on a labeled dataset.</p>
   {% endif %}
 </section>
 

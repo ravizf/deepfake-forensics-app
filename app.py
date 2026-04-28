@@ -99,17 +99,17 @@ def current_user():
 
 def detector_status_label(detector):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
-        return "Trained CNN"
+        return "Trained Model"
     if detector.get("status") == "error":
-        return "Fallback Demo"
-    return "Heuristic Mode"
+        return "Fallback Mode"
+    return "Demo Mode"
 
 
 def detector_status_note(detector):
     label = detector_status_label(detector)
-    if label == "Trained CNN":
+    if label == "Trained Model":
         return "Checkpoint loaded with calibrated scoring."
-    if label == "Fallback Demo":
+    if label == "Fallback Mode":
         return "Checkpoint unavailable or incompatible, so the demo fallback is active."
     return "Prototype heuristic mode is active until a trained checkpoint is available."
 
@@ -156,10 +156,101 @@ def image_quality_warning(analysis):
     return "No major image-quality warning was triggered during this run."
 
 
+def extract_media_metadata(analysis):
+    metadata = {
+        "media_type": analysis.get("media_type"),
+        "file_sha256_present": bool(analysis.get("file_sha256")),
+        "exif_present": False,
+        "camera_make": None,
+        "camera_model": None,
+        "software": None,
+        "image_size": None,
+        "warning": None,
+    }
+    if analysis.get("media_type") != "image":
+        metadata["warning"] = "EXIF inspection is limited for video files in this prototype."
+        return metadata
+
+    stored_path = analysis.get("stored_path")
+    if not stored_path or not os.path.exists(stored_path):
+        metadata["warning"] = "Source file was not available for metadata inspection."
+        return metadata
+
+    try:
+        with Image.open(stored_path) as image:
+            metadata["image_size"] = f"{image.width}x{image.height}"
+            exif_data = image.getexif()
+            if exif_data:
+                metadata["exif_present"] = True
+                metadata["camera_make"] = exif_data.get(271)
+                metadata["camera_model"] = exif_data.get(272)
+                metadata["software"] = exif_data.get(305)
+    except (UnidentifiedImageError, OSError, ValueError):
+        metadata["warning"] = "Image metadata could not be read reliably."
+
+    return metadata
+
+
 def metadata_check_text(analysis):
-    if analysis.get("file_sha256"):
-        return "Basic file hash captured. Full metadata authenticity checks are limited in this prototype."
-    return "Metadata capture was limited for this file."
+    metadata = extract_media_metadata(analysis)
+    if metadata["media_type"] != "image":
+        return metadata["warning"] or "Metadata inspection is limited for non-image files."
+    if metadata["exif_present"]:
+        parts = ["EXIF present"]
+        if metadata["camera_make"] or metadata["camera_model"]:
+            parts.append(
+                f"camera={metadata['camera_make'] or 'unknown'} {metadata['camera_model'] or ''}".strip()
+            )
+        if metadata["software"]:
+            parts.append(f"software={metadata['software']}")
+        return " | ".join(parts)
+    if metadata["warning"]:
+        return metadata["warning"]
+    return "No EXIF metadata found. This can happen in edited, compressed, or AI-generated images."
+
+
+def analysis_reasons(analysis):
+    reasons = []
+    fake_score = float(analysis.get("fake_prob") or 0.0)
+    real_score = float(analysis.get("real_prob") or 0.0)
+    face_count = int(analysis.get("face_count") or 0)
+    detector_breakdown = analysis.get("detector_breakdown") or {}
+
+    if face_count > 0:
+        reasons.append("Face detected and analyzed for blending or texture anomalies.")
+    else:
+        reasons.append("No clear face detected, so the decision relied on whole-image patterns.")
+
+    if detector_breakdown.get("frequency_detector", 0) >= 0.55:
+        reasons.append("Frequency-domain irregularities were stronger than typical natural-image patterns.")
+    if detector_breakdown.get("artifact_detector", 0) >= 0.55:
+        reasons.append("Texture inconsistency and sensor-noise mismatch raised the artifact score.")
+    if detector_breakdown.get("diffusion_gan_detector", 0) >= 0.55:
+        reasons.append("Synthetic texture signatures resembled common AI image artifacts.")
+
+    metadata_message = metadata_check_text(analysis)
+    if metadata_message:
+        reasons.append(metadata_message)
+
+    if not reasons:
+        if fake_score > real_score:
+            reasons.append("The model score leaned toward AI-generated characteristics.")
+        else:
+            reasons.append("The model score leaned toward natural-photo characteristics.")
+
+    return reasons[:4]
+
+
+def fraud_score_and_risk(analysis):
+    score = float(analysis.get("fake_prob") or 0.0)
+    score = max(0.0, min(100.0, score))
+    if score >= 80:
+        risk = "HIGH"
+    elif score >= 55:
+        risk = "MEDIUM"
+    else:
+        risk = "LOW"
+    return round(score, 2), risk
 
 
 def ensure_public_demo_case(analysis):
@@ -278,14 +369,17 @@ def enrich_analysis(analysis):
     )
     analysis_mode = analysis.get("analysis_mode")
     analysis["detector_badge"] = (
-        "Trained CNN" if analysis_mode == "trained_model" else "Heuristic Mode"
+        "Trained Model" if analysis_mode == "trained_model" else "Demo Mode"
     )
     analysis["model_status_label"] = (
-        "Trained CNN" if analysis_mode == "trained_model" else "Heuristic Mode"
+        "Trained Model" if analysis_mode == "trained_model" else "Demo Mode"
     )
     analysis["face_detected"] = "Yes" if int(analysis.get("face_count") or 0) > 0 else "No"
     analysis["image_quality_warning"] = image_quality_warning(analysis)
     analysis["metadata_check"] = metadata_check_text(analysis)
+    analysis["metadata_summary"] = extract_media_metadata(analysis)
+    analysis["analysis_reasons"] = analysis_reasons(analysis)
+    analysis["fraud_score"], analysis["risk_level"] = fraud_score_and_risk(analysis)
     analysis["prototype_notice"] = "This is not legal proof, only AI-assisted analysis."
     return analysis
 
@@ -303,6 +397,10 @@ def build_analysis_response(analysis):
         "face_detected": analysis.get("face_detected"),
         "image_quality_warning": analysis.get("image_quality_warning"),
         "metadata_check": analysis.get("metadata_check"),
+        "metadata_summary": analysis.get("metadata_summary"),
+        "analysis_reasons": analysis.get("analysis_reasons"),
+        "fraud_score": analysis.get("fraud_score"),
+        "risk_level": analysis.get("risk_level"),
         "prototype_notice": analysis.get("prototype_notice"),
         "fake_prob": analysis.get("fake_prob"),
         "real_prob": analysis.get("real_prob"),
@@ -365,6 +463,7 @@ def ensure_report_record(analysis):
     if analysis.get("report_path") and os.path.exists(analysis["report_path"]):
         return analysis
 
+    analysis = enrich_analysis(analysis)
     audit_trail = get_case_audit_logs(
         upload_id=analysis["upload_id"], analysis_id=analysis["analysis_id"]
     )
@@ -434,7 +533,7 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
                 ]
             ),
         )
-        analysis = get_analysis_detail(analysis_id)
+        analysis = enrich_analysis(get_analysis_detail(analysis_id))
         try:
             audit_trail = get_case_audit_logs(upload_id=upload_id, analysis_id=analysis_id)
             report_path = generate_report_document(
@@ -476,6 +575,7 @@ def home():
         "home.html",
         title="Home",
         demo_samples=list_demo_samples(),
+        latest_report=load_latest_evaluation(),
     )
 
 
@@ -744,6 +844,45 @@ def api_public_analyze():
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         app.logger.exception("Public API analyze failed")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/predict", methods=["POST"])
+def api_predict():
+    if not app.config["PUBLIC_API_ENABLED"]:
+        return jsonify({"error": "Public prediction API is disabled"}), 403
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    try:
+        demo_user = ensure_public_demo_user()
+        analysis = run_analysis_workflow(
+            file,
+            acting_user=demo_user,
+            audit_prefix="Submitted public predict API request",
+        )
+        payload = build_analysis_response(analysis)
+        return jsonify(
+            {
+                "prediction": payload["prediction"],
+                "binary_prediction": payload.get("binary_prediction"),
+                "confidence": payload["confidence"],
+                "fraud_score": payload.get("fraud_score"),
+                "risk_level": payload.get("risk_level"),
+                "face_detected": payload.get("face_detected"),
+                "image_quality_warning": payload.get("image_quality_warning"),
+                "metadata_check": payload.get("metadata_check"),
+                "analysis_reasons": payload.get("analysis_reasons"),
+                "model_status": payload.get("model_status_label"),
+                "heatmap_url": payload.get("heatmap_url"),
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        app.logger.exception("Predict API failed")
         return jsonify({"error": str(exc)}), 500
 
 

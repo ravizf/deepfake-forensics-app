@@ -15,7 +15,7 @@
       <span class="brand-mark">ST</span>
       <span class="brand-copy">
         <strong>SnapTrace</strong>
-        <small>Deepfake Forensics Lab</small>
+        <small>AI-Assisted Forensic Prototype</small>
       </span>
     </a>
     <nav class="site-nav">
@@ -30,6 +30,7 @@
         {% endif %}
         <a href="{{ url_for('logout') }}">Logout</a>
       {% else %}
+        <a href="{{ url_for('home') }}#demo-samples">Try Demo</a>
         <a href="{{ url_for('login') }}">Login</a>
         <a class="button-link" href="{{ url_for('register') }}">Register</a>
       {% endif %}

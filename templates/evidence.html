@@ -3,14 +3,16 @@
 <section class="section-header">
   <div>
     <p class="eyebrow">Visual Evidence</p>
-    <h1>Heatmap and attribution evidence for case #{{ analysis.analysis_id }}</h1>
+    <h1>Prototype visual explanation for case #{{ analysis.analysis_id }}</h1>
   </div>
-  <a class="button-link" href="{{ analysis.report_url }}">View Report</a>
+  {% if not public_demo and analysis.report_url %}
+    <a class="button-link" href="{{ analysis.report_url }}">View Report</a>
+  {% endif %}
 </section>
 
 <section class="grid two-up">
   <article class="panel">
-    <h2>Artifact Heatmap</h2>
+    <h2>Visual Explanation Heatmap</h2>
     {% if analysis.heatmap_url %}
       <img class="evidence-image" src="{{ analysis.heatmap_url }}" alt="Heatmap evidence">
     {% else %}
@@ -25,15 +27,19 @@
       <li>Binary result: {{ analysis.binary_prediction or analysis.prediction }}</li>
       <li>Confidence: {{ analysis.confidence }}%</li>
       <li>Confidence band: {{ analysis.confidence_band or "N/A" }}</li>
+      <li>Model status: {{ analysis.model_status_label }}</li>
       <li>Detector used: {{ analysis.inference_engine }}</li>
       <li>Model version: {{ analysis.model_version or "N/A" }}</li>
       <li>Dataset version: {{ analysis.dataset_version or "N/A" }}</li>
       <li>Calibration: {{ analysis.calibration_method or "N/A" }}{% if analysis.temperature is not none %} (temperature={{ analysis.temperature }}){% endif %}</li>
       <li>Analysis mode: {{ analysis.analysis_mode }}</li>
+      <li>Face detected: {{ analysis.face_detected }}</li>
+      <li>Image quality warning: {{ analysis.image_quality_warning }}</li>
+      <li>Metadata check: {{ analysis.metadata_check }}</li>
       <li>Face region analyzed: {{ analysis.face_strategy or "N/A" }}</li>
       <li>Review status: {{ analysis.review_status or "N/A" }}</li>
     </ul>
-    <h3>Source Attribution</h3>
+    <h3>Prototype Source Attribution Estimate</h3>
     <div class="attribution-list">
       {% for label, score in analysis.attribution.items() %}
         <div class="attribution-row">
@@ -48,6 +54,7 @@
         <li>{{ item }}</li>
       {% endfor %}
     </ul>
+    <p class="muted">{{ analysis.prototype_notice }}</p>
   </article>
 </section>
 {% endblock %}

@@ -1,6 +1,9 @@
 import os
 import hashlib
+import mimetypes
 from functools import wraps
+from io import BytesIO
+from pathlib import Path
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
@@ -23,6 +26,7 @@ from flask import (
 )
 from flask_cors import CORS
 from PIL import Image, ImageOps, UnidentifiedImageError
+from werkzeug.datastructures import FileStorage
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -82,12 +86,103 @@ for folder in (
 
 init_db()
 
+DEMO_SAMPLE_ROOT = Path(app.root_path) / "dataset" / "test"
+DEMO_SAMPLE_LIMIT_PER_CLASS = 2
+
 
 def current_user():
     user_id = session.get("user_id")
     if not user_id:
         return None
     return get_user_by_id(user_id)
+
+
+def detector_status_label(detector):
+    if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
+        return "Trained CNN"
+    if detector.get("status") == "error":
+        return "Fallback Demo"
+    return "Heuristic Mode"
+
+
+def detector_status_note(detector):
+    label = detector_status_label(detector)
+    if label == "Trained CNN":
+        return "Checkpoint loaded with calibrated scoring."
+    if label == "Fallback Demo":
+        return "Checkpoint unavailable or incompatible, so the demo fallback is active."
+    return "Prototype heuristic mode is active until a trained checkpoint is available."
+
+
+def list_demo_samples():
+    samples = []
+    label_map = {
+        "real": "Real sample",
+        "fake": "AI-generated sample",
+    }
+    for label, title in label_map.items():
+        sample_dir = DEMO_SAMPLE_ROOT / label
+        if not sample_dir.is_dir():
+            continue
+        for path in sorted(p for p in sample_dir.iterdir() if p.is_file())[:DEMO_SAMPLE_LIMIT_PER_CLASS]:
+            samples.append(
+                {
+                    "id": f"{label}-{path.stem}",
+                    "label": label,
+                    "title": title,
+                    "filename": path.name,
+                    "path": path,
+                }
+            )
+    return samples
+
+
+def get_demo_sample(sample_id):
+    for sample in list_demo_samples():
+        if sample["id"] == sample_id:
+            return sample
+    return None
+
+
+def image_quality_warning(analysis):
+    if analysis.get("media_type") != "image":
+        return "Video analysis uses the fallback scoring path in this prototype."
+
+    face_count = int(analysis.get("face_count") or 0)
+    if face_count == 0:
+        return "No clear face was detected, so this result relied on full-image analysis only."
+    if analysis.get("confidence_band") in {"Low", "Review Required"}:
+        return "Low-confidence image. Compression, blur, or weak facial detail may reduce reliability."
+    return "No major image-quality warning was triggered during this run."
+
+
+def metadata_check_text(analysis):
+    if analysis.get("file_sha256"):
+        return "Basic file hash captured. Full metadata authenticity checks are limited in this prototype."
+    return "Metadata capture was limited for this file."
+
+
+def ensure_public_demo_case(analysis):
+    demo_user = ensure_public_demo_user()
+    if not analysis or analysis.get("user_id") != demo_user["id"]:
+        abort(403)
+
+
+def enrich_public_demo_analysis(analysis):
+    analysis = enrich_analysis(analysis)
+    if not analysis:
+        return None
+    if analysis.get("heatmap_path"):
+        analysis["heatmap_url"] = url_for(
+            "public_artifact_file",
+            kind="heatmaps",
+            filename=os.path.basename(analysis["heatmap_path"]),
+        )
+    analysis["evidence_url"] = url_for("public_evidence_page", analysis_id=analysis["analysis_id"])
+    analysis["report_url"] = None
+    analysis["report_download_url"] = None
+    analysis["report_artifact_url"] = None
+    return analysis
 
 
 @app.before_request
@@ -97,10 +192,13 @@ def load_user():
 
 @app.context_processor
 def inject_globals():
+    active_detector = detector_descriptor()
     return {
         "current_user": g.get("current_user"),
         "app_name": "SnapTrace Forensics",
-        "active_detector": detector_descriptor(),
+        "active_detector": active_detector,
+        "active_detector_label": detector_status_label(active_detector),
+        "active_detector_note": detector_status_note(active_detector),
     }
 
 
@@ -178,9 +276,17 @@ def enrich_analysis(analysis):
     analysis["source_api_url"] = url_for(
         "api_source_attribution", analysis_id=analysis["analysis_id"]
     )
+    analysis_mode = analysis.get("analysis_mode")
     analysis["detector_badge"] = (
-        "Trained Model" if analysis.get("analysis_mode") == "trained_model" else "Fallback Demo"
+        "Trained CNN" if analysis_mode == "trained_model" else "Heuristic Mode"
     )
+    analysis["model_status_label"] = (
+        "Trained CNN" if analysis_mode == "trained_model" else "Heuristic Mode"
+    )
+    analysis["face_detected"] = "Yes" if int(analysis.get("face_count") or 0) > 0 else "No"
+    analysis["image_quality_warning"] = image_quality_warning(analysis)
+    analysis["metadata_check"] = metadata_check_text(analysis)
+    analysis["prototype_notice"] = "This is not legal proof, only AI-assisted analysis."
     return analysis
 
 
@@ -193,6 +299,11 @@ def build_analysis_response(analysis):
         "confidence": analysis["confidence"],
         "confidence_band": analysis.get("confidence_band"),
         "review_status": analysis.get("review_status"),
+        "model_status_label": analysis.get("model_status_label"),
+        "face_detected": analysis.get("face_detected"),
+        "image_quality_warning": analysis.get("image_quality_warning"),
+        "metadata_check": analysis.get("metadata_check"),
+        "prototype_notice": analysis.get("prototype_notice"),
         "fake_prob": analysis.get("fake_prob"),
         "real_prob": analysis.get("real_prob"),
         "source_model": analysis["source_model"],
@@ -361,7 +472,11 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
 
 @app.route("/")
 def home():
-    return render_template("home.html", title="Home")
+    return render_template(
+        "home.html",
+        title="Home",
+        demo_samples=list_demo_samples(),
+    )
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -567,6 +682,16 @@ def artifact_file(kind, filename):
     return send_from_directory(folders[kind], filename)
 
 
+@app.route("/public/artifacts/<kind>/<path:filename>")
+def public_artifact_file(kind, filename):
+    folders = {
+        "heatmaps": app.config["HEATMAP_FOLDER"],
+    }
+    if kind not in folders:
+        abort(404)
+    return send_from_directory(folders[kind], filename)
+
+
 @app.route("/download/report/<int:analysis_id>")
 @login_required
 def download_report(analysis_id):
@@ -620,6 +745,53 @@ def api_public_analyze():
     except Exception as exc:
         app.logger.exception("Public API analyze failed")
         return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/demo/sample/<sample_id>")
+def run_demo_sample(sample_id):
+    if not app.config["PUBLIC_API_ENABLED"]:
+        abort(403)
+
+    sample = get_demo_sample(sample_id)
+    if not sample:
+        abort(404)
+
+    demo_user = ensure_public_demo_user()
+    with sample["path"].open("rb") as stream:
+        payload = BytesIO(stream.read())
+        file_storage = FileStorage(
+            stream=payload,
+            filename=sample["filename"],
+            content_type=mimetypes.guess_type(sample["filename"])[0] or "application/octet-stream",
+        )
+        analysis = run_analysis_workflow(
+            file_storage,
+            acting_user=demo_user,
+            audit_prefix=f"Submitted demo sample ({sample['label']})",
+        )
+
+    return redirect(url_for("public_result_page", analysis_id=analysis["analysis_id"]))
+
+
+@app.route("/demo/analysis/<int:analysis_id>")
+def public_result_page(analysis_id):
+    analysis = get_analysis_detail(analysis_id)
+    ensure_public_demo_case(analysis)
+    analysis = enrich_public_demo_analysis(analysis)
+    return render_template("result.html", title="Demo Result", analysis=analysis, public_demo=True)
+
+
+@app.route("/demo/analysis/<int:analysis_id>/evidence")
+def public_evidence_page(analysis_id):
+    analysis = get_analysis_detail(analysis_id)
+    ensure_public_demo_case(analysis)
+    analysis = enrich_public_demo_analysis(analysis)
+    return render_template(
+        "evidence.html",
+        title="Demo Visual Evidence",
+        analysis=analysis,
+        public_demo=True,
+    )
 
 
 @app.route("/health")

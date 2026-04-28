@@ -219,6 +219,26 @@ button {
   align-items: center;
 }
 
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1rem 0 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.48rem 0.85rem;
+  border: 1px solid rgba(95, 214, 255, 0.28);
+  background: rgba(95, 214, 255, 0.12);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 .hero-panel,
 .grid,
 .grid.three-up,
@@ -269,6 +289,10 @@ button {
 
 .metric-card strong {
   font-size: 1.25rem;
+}
+
+.demo-card h3 {
+  margin: 0.25rem 0 0.75rem;
 }
 
 .form-card {

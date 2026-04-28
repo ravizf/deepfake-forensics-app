@@ -5,10 +5,13 @@
     <p class="eyebrow">Analysis Result</p>
     <h1>{{ analysis.original_filename }}</h1>
     <p class="lead">{{ analysis.summary }}</p>
+    <p class="muted">{{ analysis.prototype_notice }}</p>
   </div>
   <div class="hero-actions">
-    <a class="button-link" href="{{ analysis.evidence_url }}">Artifact Heatmap</a>
-    <a class="ghost-link" href="{{ analysis.report_url }}">Open Report</a>
+    <a class="button-link" href="{{ analysis.evidence_url }}">Visual Explanation</a>
+    {% if not public_demo and analysis.report_url %}
+      <a class="ghost-link" href="{{ analysis.report_url }}">Open Report</a>
+    {% endif %}
   </div>
 </section>
 
@@ -17,9 +20,10 @@
   <article class="metric-card"><span>Binary Result</span><strong>{{ analysis.binary_prediction or analysis.prediction }}</strong></article>
   <article class="metric-card"><span>Confidence</span><strong>{{ analysis.confidence }}%</strong></article>
   <article class="metric-card"><span>Confidence Band</span><strong>{{ analysis.confidence_band or "N/A" }}</strong></article>
+  <article class="metric-card"><span>Model Status</span><strong>{{ analysis.model_status_label }}</strong></article>
   <article class="metric-card"><span>Detector Name</span><strong>{{ analysis.inference_engine }}</strong></article>
   <article class="metric-card"><span>Analysis Mode</span><strong>{{ analysis.analysis_mode }}</strong></article>
-  <article class="metric-card"><span>Face Count</span><strong>{{ analysis.face_count }}</strong></article>
+  <article class="metric-card"><span>Face Detected</span><strong>{{ analysis.face_detected }}</strong></article>
   <article class="metric-card"><span>Review Status</span><strong>{{ analysis.review_status or "Pending" }}</strong></article>
   <article class="metric-card"><span>AI Score</span><strong>{{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</strong></article>
   <article class="metric-card"><span>Real Score</span><strong>{{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</strong></article>
@@ -27,13 +31,15 @@
 
 <section class="grid two-up">
   <article class="panel">
-    <h2>Evidence Summary</h2>
+    <h2>Why This Result?</h2>
     <ul class="clean-list">
       {% for item in analysis.evidence_points %}
         <li>{{ item }}</li>
       {% endfor %}
     </ul>
-    <p class="muted">Source attribution API: <code>{{ analysis.source_api_url }}</code></p>
+    {% if not public_demo %}
+      <p class="muted">Source attribution API: <code>{{ analysis.source_api_url }}</code></p>
+    {% endif %}
   </article>
 
   <article class="panel">
@@ -42,6 +48,7 @@
       <li>Media type: {{ analysis.media_type }}</li>
       <li>Uploaded by: {{ analysis.full_name }}</li>
       <li>Uploaded at: {{ analysis.uploaded_at }}</li>
+      <li>Model status: {{ analysis.model_status_label }}</li>
       <li>Detector: {{ analysis.inference_engine }}</li>
       <li>Detector version: {{ analysis.detector_version }}</li>
       <li>Model version: {{ analysis.model_version or "N/A" }}</li>
@@ -52,19 +59,27 @@
       <li>Binary result: {{ analysis.binary_prediction or analysis.prediction }}</li>
       <li>Confidence band: {{ analysis.confidence_band or "N/A" }}</li>
       <li>Review status: {{ analysis.review_status or "N/A" }}</li>
-      <li>Source attribution: {{ analysis.source_model }}</li>
+      <li>Prototype source attribution estimate: {{ analysis.source_model }}</li>
       <li>Leaning result: {{ analysis.leaning_prediction or analysis.prediction }}</li>
       <li>AI score: {{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</li>
       <li>Real score: {{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</li>
       <li>Uncertainty score: {{ ((analysis.uncertainty_score or 0) * 100)|round(1) }}%</li>
       <li>Frequency score: {{ analysis.frequency_score }}</li>
+      <li>Face detected: {{ analysis.face_detected }}</li>
       <li>Face count: {{ analysis.face_count }}</li>
       <li>Face region analyzed: {{ analysis.face_strategy or "N/A" }}</li>
+      <li>Image quality warning: {{ analysis.image_quality_warning }}</li>
+      <li>Metadata check: {{ analysis.metadata_check }}</li>
       <li>SHA-256: <code>{{ analysis.file_sha256 or "Unavailable" }}</code></li>
       <li>Analysis timestamp: {{ analysis.created_at }}</li>
       <li>Report status: {{ analysis.report_status or "pending" }}</li>
     </ul>
   </article>
+</section>
+
+<section class="panel">
+  <h2>Important Notice</h2>
+  <p class="lead">{{ analysis.prototype_notice }}</p>
 </section>
 
 {% if analysis.analysis_mode != "trained_model" %}

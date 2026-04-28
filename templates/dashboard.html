@@ -3,7 +3,7 @@
 <section class="section-header">
   <div>
     <p class="eyebrow">Analyst Dashboard</p>
-    <h1>Track current investigations and launch new forensic scans.</h1>
+    <h1>Track prototype investigations and launch new AI-assisted scans.</h1>
   </div>
   <a class="button-link" href="{{ url_for('upload_page') }}">Upload New Evidence</a>
 </section>
@@ -13,6 +13,12 @@
   <article class="metric-card"><span>Flagged Fake</span><strong>{{ summary.fake_cases }}</strong></article>
   <article class="metric-card"><span>Reports Ready</span><strong>{{ summary.reports_ready }}</strong></article>
   <article class="metric-card"><span>Audit Events</span><strong>{{ summary.audit_events }}</strong></article>
+</section>
+
+<section class="panel">
+  <h2>Model Status</h2>
+  <p><strong>{{ active_detector_label }}</strong></p>
+  <p class="muted">{{ active_detector_note }}</p>
 </section>
 
 <section class="grid two-up">
@@ -50,8 +56,8 @@
     <h2>Workflow Coverage</h2>
     <ul class="clean-list">
       <li>Evidence intake with file metadata capture</li>
-      <li>Deepfake prediction and confidence scoring</li>
-      <li>Source attribution API and visual heatmap evidence</li>
+      <li>Prototype real-vs-AI prediction and confidence scoring</li>
+      <li>Visual explanation heatmap and evidence notes</li>
       <li>Generated reports plus investigation history</li>
       <li>Audit logging for forensic traceability</li>
     </ul>

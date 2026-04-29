@@ -224,6 +224,25 @@ button {
   align-items: center;
 }
 
+.hero-centered {
+  grid-template-columns: 1fr;
+  max-width: 54rem;
+  margin-inline: auto;
+}
+
+.hero-copy-centered {
+  text-align: center;
+}
+
+.hero-actions-centered {
+  justify-content: center;
+}
+
+.lead-strong {
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
 .status-strip {
   display: flex;
   flex-wrap: wrap;
@@ -332,6 +351,21 @@ input {
   padding-left: 1rem;
   display: grid;
   gap: 0.55rem;
+}
+
+.compact-list {
+  width: fit-content;
+  margin-inline: auto;
+  text-align: left;
+}
+
+.hero-list {
+  margin-top: 0.35rem;
+  margin-bottom: 1.1rem;
+}
+
+.home-disclaimer {
+  margin-top: 1.15rem;
 }
 
 pre {

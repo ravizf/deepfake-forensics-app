@@ -3,8 +3,8 @@
 <section class="section-header">
   <div>
     <p class="eyebrow">Public Demo</p>
-    <h1>Try demo samples without creating an account.</h1>
-    <p class="lead">Use these sample images to test the current prototype flow, then open the full result, heatmap, and report output.</p>
+    <h1>Try Demo</h1>
+    <p class="lead">Select a real or AI-generated sample image and open the full result page without logging in.</p>
   </div>
 </section>
 
@@ -25,8 +25,8 @@
             <img src="{{ sample.preview_url }}" alt="{{ sample.filename }}">
           {% endif %}
           <h3>{{ sample.filename }}</h3>
-          <p class="muted">Expected class: {{ sample.label|title }}</p>
-          <a class="button-link" href="{{ url_for('run_demo_sample', sample_id=sample.id) }}">Analyze Demo Sample</a>
+          <p class="muted">Sample type: {{ sample.label|title }}</p>
+          <a class="button-link" href="{{ url_for('run_demo_sample', sample_id=sample.id) }}">Open Result</a>
         </article>
       {% endfor %}
     </div>

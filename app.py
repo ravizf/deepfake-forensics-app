@@ -89,8 +89,8 @@ for folder in (
 init_db()
 
 DEMO_SAMPLE_ROOTS = [
-    Path(app.root_path) / "static" / "demo-samples",
     Path(app.root_path) / "static" / "demo",
+    Path(app.root_path) / "static" / "demo-samples",
     Path(app.root_path) / "dataset" / "test",
 ]
 DEMO_SAMPLE_LIMIT_PER_CLASS = 2
@@ -105,9 +105,9 @@ def current_user():
 
 def detector_status_label(detector, benchmark_report=None):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
-        if not benchmark_report:
-            return "Prototype Model — Evaluation Pending"
-        return "Trained Model"
+        if benchmark_report:
+            return "Prototype Model — Evaluation Complete"
+        return "Prototype Model — Evaluation Pending"
     if detector.get("status") == "error":
         return "Fallback Mode"
     return "Demo Mode"
@@ -115,8 +115,8 @@ def detector_status_label(detector, benchmark_report=None):
 
 def detector_status_note(detector, benchmark_report=None):
     label = detector_status_label(detector, benchmark_report)
-    if label == "Trained Model":
-        return "Checkpoint loaded with calibrated scoring."
+    if label == "Prototype Model — Evaluation Complete":
+        return "Prototype checkpoint loaded with benchmark reporting available."
     if label == "Prototype Model — Evaluation Pending":
         return "Checkpoint is loaded, but benchmark metrics have not been published yet."
     if label == "Fallback Mode":
@@ -167,15 +167,12 @@ def get_demo_sample(sample_id):
 
 def benchmark_summary(report, detector=None):
     if not report:
-        dataset_name = None
-        if detector:
-            dataset_name = detector.get("dataset_version")
         return {
             "accuracy": "Evaluation Pending",
             "precision": "Evaluation Pending",
             "recall": "Evaluation Pending",
             "f1_score": "Evaluation Pending",
-            "test_dataset": dataset_name or "Evaluation Pending",
+            "test_dataset": "Evaluation Pending",
         }
 
     precision = float(report.get("ai_metrics", {}).get("precision") or 0.0)
@@ -236,20 +233,22 @@ def analysis_reasons(analysis):
     detector_breakdown = analysis.get("detector_breakdown") or {}
 
     if face_count > 0:
-        reasons.append("Face detected and analyzed for blending or texture anomalies.")
+        reasons.append("Face texture inconsistency detected.")
     else:
-        reasons.append("No clear face detected, so the decision relied on whole-image patterns.")
+        reasons.append("Whole-image visual patterns were used because no clear face was detected.")
 
     if detector_breakdown.get("frequency_detector", 0) >= 0.55:
-        reasons.append("Frequency-domain irregularities were stronger than typical natural-image patterns.")
+        reasons.append("Compression artifacts observed.")
     if detector_breakdown.get("artifact_detector", 0) >= 0.55:
-        reasons.append("Texture inconsistency and sensor-noise mismatch raised the artifact score.")
+        reasons.append("Texture inconsistency detected.")
     if detector_breakdown.get("diffusion_gan_detector", 0) >= 0.55:
-        reasons.append("Synthetic texture signatures resembled common AI image artifacts.")
+        reasons.append("Possible synthetic generation patterns detected.")
 
     metadata_message = metadata_check_text(analysis)
-    if metadata_message:
-        reasons.append(metadata_message)
+    if analysis.get("metadata_summary", {}).get("exif_present"):
+        reasons.append("Camera metadata is present in the uploaded file.")
+    elif metadata_message:
+        reasons.append("Missing or altered metadata.")
 
     if not reasons:
         if fake_score > real_score:
@@ -391,7 +390,7 @@ def enrich_analysis(analysis):
     latest_report = load_latest_evaluation()
     if analysis_mode == "trained_model":
         model_status = (
-            "Trained Model"
+            "Prototype Model — Evaluation Complete"
             if latest_report
             else "Prototype Model — Evaluation Pending"
         )
@@ -413,7 +412,7 @@ def enrich_analysis(analysis):
         str(analysis.get("prediction") or "").replace("AI-Generated", "AI Generated")
     )
     analysis["display_risk_level"] = analysis["risk_level"]
-    analysis["prototype_notice"] = "This is not legal proof, only AI-assisted analysis."
+    analysis["prototype_notice"] = "This is AI-assisted analysis and not legal proof."
     return analysis
 
 

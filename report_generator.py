@@ -25,9 +25,9 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
     pdf.add_page()
 
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "SnapTrace Prototype Report", ln=True)
+    pdf.cell(0, 10, "SnapTrace Forensics Report", ln=True)
     pdf.set_font("Arial", "", 11)
-    pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True)
+    pdf.cell(0, 8, f"Timestamp: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True)
     pdf.cell(0, 8, f"Prediction: {analysis.get('display_prediction') or analysis.get('prediction')}", ln=True)
     pdf.cell(0, 8, f"Confidence: {analysis.get('confidence', 'N/A')}%", ln=True)
     pdf.cell(
@@ -37,13 +37,13 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
         ln=True,
     )
     pdf.cell(0, 8, f"Risk Level: {analysis.get('display_risk_level') or analysis.get('risk_level')}", ln=True)
-    pdf.cell(0, 8, f"Model Status: {analysis.get('model_status_label', 'N/A')}", ln=True)
+    pdf.cell(0, 8, f"Model Status: {analysis.get('model_status_label', 'Prototype Model')}", ln=True)
     pdf.cell(0, 8, f"Metadata Found: {analysis.get('metadata_found', 'N/A')}", ln=True)
     pdf.cell(0, 8, f"Face Detected: {analysis.get('face_detected', 'N/A')}", ln=True)
     pdf.ln(2)
 
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 8, "Why This Result?", ln=True)
+    pdf.cell(0, 8, "Analysis", ln=True)
     pdf.set_font("Arial", "", 11)
     for reason in analysis.get("analysis_reasons") or []:
         pdf.multi_cell(0, 7, f"- {reason}")
@@ -82,7 +82,7 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
         0,
         6,
         analysis.get("prototype_notice")
-        or "This is AI-assisted analysis, not legal proof.",
+        or "This report is AI-assisted and not legal proof.",
     )
     pdf.output(report_path)
     return report_path

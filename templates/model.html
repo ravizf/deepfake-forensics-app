@@ -2,55 +2,29 @@
 {% block content %}
 <section class="section-header">
   <div>
-    <p class="eyebrow">Model Evaluation</p>
-    <h1>Prototype model, dataset, and benchmark snapshot.</h1>
-    <p class="lead">Use this page to explain what checkpoint is loaded, what data has been benchmarked, and where the current prototype still has limitations.</p>
+    <p class="eyebrow">Model Information</p>
+    <h1>Model Info</h1>
   </div>
 </section>
 
-<section class="grid four-up">
-  <article class="metric-card"><span>Model Status</span><strong>{{ active_detector_label }}</strong></article>
-  <article class="metric-card"><span>Architecture</span><strong>{{ detector_status.architecture or "N/A" }}</strong></article>
-  <article class="metric-card"><span>Dataset</span><strong>{{ benchmark_summary.test_dataset }}</strong></article>
-  <article class="metric-card"><span>Version</span><strong>{{ detector_status.model_version or detector_status.detector_version or "N/A" }}</strong></article>
-</section>
-
-<section class="grid two-up">
-  <article class="panel">
-    <h2>Model Card</h2>
-    <ul class="clean-list">
-      <li>Model: CNN prototype detector</li>
-      <li>Architecture: {{ detector_status.architecture or "Not declared" }}</li>
-      <li>Dataset: {{ benchmark_summary.test_dataset }}</li>
-      <li>Training date: {{ detector_status.training_date or "N/A" }}</li>
-      <li>Calibration: {{ detector_status.calibration_method or "N/A" }}{% if detector_status.temperature is not none %} (temperature={{ detector_status.temperature }}){% endif %}</li>
-      <li>Public status: {{ active_detector_label }}</li>
-    </ul>
-  </article>
-
-  <article class="panel">
-    <h2>Limitations</h2>
-    <ul class="clean-list">
-      <li>Low-resolution or heavily compressed images can reduce reliability.</li>
-      <li>Unseen generators and new manipulation methods may not generalize well.</li>
-      <li>This system is a research prototype and should not be treated as legal proof.</li>
-    </ul>
-  </article>
-</section>
-
 <section class="panel">
-  <h2>Benchmark Snapshot</h2>
   <ul class="clean-list">
+    <li>Model Status: {{ active_detector_label }}</li>
+    <li>Model Type: CNN-based Deepfake Detector</li>
+    <li>Dataset: {{ benchmark_summary.test_dataset }}</li>
     <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
     <li>Precision: {{ benchmark_summary.precision }}</li>
     <li>Recall: {{ benchmark_summary.recall }}</li>
     <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
-    <li>Test dataset: {{ benchmark_summary.test_dataset }}</li>
-    {% if latest_report %}
-      <li>Generated at: {{ latest_report.generated_at }}</li>
-    {% else %}
-      <li>Benchmark proof: Evaluation Pending.</li>
-    {% endif %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Limitations</h2>
+  <ul class="clean-list">
+    <li>May not detect new AI models</li>
+    <li>Performance depends on image quality</li>
+    <li>Not intended as legal evidence</li>
   </ul>
 </section>
 {% endblock %}

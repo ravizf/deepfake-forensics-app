@@ -4,15 +4,14 @@
   <div>
     <p class="eyebrow">Analysis Result</p>
     <h1>{{ analysis.display_prediction or analysis.prediction }}</h1>
-    <p class="lead">{{ analysis.summary }}</p>
-    <p class="muted">{{ analysis.prototype_notice }}</p>
+    <p class="lead">{{ analysis.prototype_notice }}</p>
   </div>
   <div class="hero-actions">
     {% if analysis.heatmap_url %}
       <a class="button-link" href="{{ analysis.evidence_url }}">View Heatmap</a>
     {% endif %}
     {% if analysis.report_download_url %}
-      <a class="ghost-link" href="{{ analysis.report_download_url }}">Download PDF Report</a>
+      <a class="ghost-link" href="{{ analysis.report_download_url }}">Download Report</a>
     {% endif %}
     <a class="ghost-link" href="{% if public_demo %}{{ url_for('demo_page') }}{% else %}{{ url_for('upload_page') }}{% endif %}">Analyze Another Image</a>
   </div>
@@ -21,26 +20,18 @@
 <section class="grid four-up">
   <article class="metric-card"><span>Prediction</span><strong>{{ analysis.display_prediction or analysis.prediction }}</strong></article>
   <article class="metric-card"><span>Confidence</span><strong>{{ analysis.confidence }}%</strong></article>
-  <article class="metric-card"><span>Risk Score</span><strong>{{ analysis.risk_score or analysis.fraud_score }}/100</strong></article>
+  <article class="metric-card"><span>Risk Score</span><strong>{{ analysis.risk_score or analysis.fraud_score }} / 100</strong></article>
   <article class="metric-card"><span>Risk Level</span><strong>{{ analysis.display_risk_level or analysis.risk_level }}</strong></article>
   <article class="metric-card"><span>Model Status</span><strong>{{ analysis.model_status_label }}</strong></article>
   <article class="metric-card"><span>Face Detected</span><strong>{{ analysis.face_detected }}</strong></article>
   <article class="metric-card"><span>Metadata Found</span><strong>{{ analysis.metadata_found }}</strong></article>
-  <article class="metric-card"><span>Confidence Band</span><strong>{{ analysis.confidence_band or "N/A" }}</strong></article>
-  <article class="metric-card"><span>Detector</span><strong>{{ analysis.inference_engine }}</strong></article>
 </section>
 
 <section class="grid two-up">
   <article class="panel">
-    <h2>Why this result?</h2>
+    <h2>Why this result</h2>
     <ul class="clean-list">
       {% for item in analysis.analysis_reasons or [] %}
-        <li>{{ item }}</li>
-      {% endfor %}
-    </ul>
-    <h3>Detailed Evidence</h3>
-    <ul class="clean-list">
-      {% for item in analysis.evidence_points %}
         <li>{{ item }}</li>
       {% endfor %}
     </ul>
@@ -51,63 +42,18 @@
     <ul class="clean-list">
       <li>Camera: {{ analysis.metadata_summary.camera_make or "Not Found" }} {{ analysis.metadata_summary.camera_model or "" }}</li>
       <li>Software: {{ analysis.metadata_summary.software or "Unknown" }}</li>
-      <li>EXIF Found: {{ analysis.metadata_found }}</li>
-      <li>Metadata Check: {{ analysis.metadata_check }}</li>
-      <li>Image quality warning: {{ analysis.image_quality_warning }}</li>
-    </ul>
-  </article>
-</section>
-
-<section class="grid two-up">
-  <article class="panel">
-    <h2>Visual Evidence</h2>
-    {% if analysis.heatmap_url %}
-      <img class="evidence-image" src="{{ analysis.heatmap_url }}" alt="Heatmap evidence preview">
-    {% else %}
-      <p class="muted">Heatmap evidence is not available for this analysis.</p>
-    {% endif %}
-  </article>
-
-  <article class="panel">
-    <h2>Case Trace</h2>
-    <ul class="clean-list">
-      <li>Media type: {{ analysis.media_type }}</li>
-      <li>Uploaded by: {{ analysis.full_name }}</li>
-      <li>Uploaded at: {{ analysis.uploaded_at }}</li>
-      <li>Analysis timestamp: {{ analysis.created_at }}</li>
-      <li>Detector version: {{ analysis.detector_version }}</li>
-      <li>Model version: {{ analysis.model_version or "N/A" }}</li>
-      <li>Dataset version: {{ analysis.dataset_version or "N/A" }}</li>
-      <li>Training date: {{ analysis.training_date or "N/A" }}</li>
-      <li>Calibration: {{ analysis.calibration_method or "N/A" }}{% if analysis.temperature is not none %} (temperature={{ analysis.temperature }}){% endif %}</li>
-      <li>AI score: {{ analysis.fake_prob if analysis.fake_prob is not none else "N/A" }}{% if analysis.fake_prob is not none %}%{% endif %}</li>
-      <li>Real score: {{ analysis.real_prob if analysis.real_prob is not none else "N/A" }}{% if analysis.real_prob is not none %}%{% endif %}</li>
-      <li>SHA-256: <code>{{ analysis.file_sha256 or "Unavailable" }}</code></li>
+      <li>EXIF Data: {{ analysis.metadata_found }}</li>
+      <li>Metadata Note: {{ analysis.metadata_check }}</li>
     </ul>
   </article>
 </section>
 
 <section class="panel">
-  <h2>Important Notice</h2>
-  <p class="lead">{{ analysis.prototype_notice }}</p>
-</section>
-
-{% if analysis.analysis_mode != "trained_model" %}
-<section class="panel">
-  <h2>Accuracy Note</h2>
-  <p class="lead">
-    This result came from the heuristic fallback because no trained checkpoint is currently active.
-    Option 1: put <code>deepfake_model.pth</code> in the project root beside <code>app.py</code>, <code>forensics.py</code>, and <code>model_manifest.json</code>. Option 2: if the file is stored elsewhere, update <code>checkpoint_path</code> in <code>model_manifest.json</code>.
-  </p>
-  {% if analysis.prediction == "Uncertain" %}
-  <p class="lead">
-    This case is uncertain, with the current signal leaning toward <strong>{{ analysis.leaning_prediction }}</strong>.
-    Treat it as a review flag until a trained model is plugged in and benchmarked.
-  </p>
+  <h2>Visual Evidence</h2>
+  {% if analysis.heatmap_url %}
+    <img class="evidence-image" src="{{ analysis.heatmap_url }}" alt="Heatmap evidence preview">
+  {% else %}
+    <p class="muted">Visual evidence is not available for this analysis.</p>
   {% endif %}
-  <p class="lead">
-    Restart the server after adding the file. When setup is correct, the terminal should show <code>MODEL LOADED: True</code> and analysis results should move from <code>Heuristic fallback</code> to <code>SnapTrace Deepfake Detector</code>.
-  </p>
 </section>
-{% endif %}
 {% endblock %}

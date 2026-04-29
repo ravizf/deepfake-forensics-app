@@ -22,12 +22,18 @@
   <article class="metric-card"><span>Confidence</span><strong>{{ analysis.confidence }}%</strong></article>
   <article class="metric-card"><span>Risk Score</span><strong>{{ analysis.risk_score or analysis.fraud_score }} / 100</strong></article>
   <article class="metric-card"><span>Risk Level</span><strong>{{ analysis.display_risk_level or analysis.risk_level }}</strong></article>
-  <article class="metric-card"><span>Model Status</span><strong>{{ analysis.model_status_label }}</strong></article>
-  <article class="metric-card"><span>Face Detected</span><strong>{{ analysis.face_detected }}</strong></article>
-  <article class="metric-card"><span>Metadata Found</span><strong>{{ analysis.metadata_found }}</strong></article>
 </section>
 
 <section class="grid two-up">
+  <article class="panel">
+    <h2>Analysis Status</h2>
+    <ul class="clean-list">
+      <li>Analysis Engine: {{ analysis.analysis_engine_label }}</li>
+      <li>Detection Mode: {{ analysis.detection_mode_label }}</li>
+      <li>Evaluation Status: {{ analysis.evaluation_status_label }}</li>
+    </ul>
+  </article>
+
   <article class="panel">
     <h2>Why this result</h2>
     <ul class="clean-list">
@@ -44,6 +50,7 @@
       <li>Software: {{ analysis.metadata_summary.software or "Unknown" }}</li>
       <li>EXIF Data: {{ analysis.metadata_found }}</li>
       <li>Metadata Note: {{ analysis.metadata_check }}</li>
+      <li>Face Detected: {{ analysis.face_detected }}</li>
     </ul>
   </article>
 </section>

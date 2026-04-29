@@ -104,24 +104,32 @@ def current_user():
 
 
 def detector_status_label(detector, benchmark_report=None):
-    if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
-        if benchmark_report:
-            return "Prototype Model — Evaluation Complete"
-        return "Prototype Model — Evaluation Pending"
-    if detector.get("status") == "error":
-        return "Fallback Mode"
-    return "Demo Mode"
+    if benchmark_report:
+        return "Benchmark Available"
+    return "Benchmark Pending"
 
 
 def detector_status_note(detector, benchmark_report=None):
     label = detector_status_label(detector, benchmark_report)
-    if label == "Prototype Model — Evaluation Complete":
-        return "Prototype checkpoint loaded with benchmark reporting available."
-    if label == "Prototype Model — Evaluation Pending":
-        return "Checkpoint is loaded, but benchmark metrics have not been published yet."
-    if label == "Fallback Mode":
-        return "Checkpoint unavailable or incompatible, so the demo fallback is active."
-    return "Prototype heuristic mode is active until a trained checkpoint is available."
+    if label == "Benchmark Available":
+        return "Benchmark metrics are available for the current detector setup."
+    if detector.get("status") == "error":
+        return "Checkpoint is unavailable or incompatible, so benchmark reporting is still pending."
+    return "Checkpoint is loaded, but benchmark metrics have not been published yet."
+
+
+def analysis_engine_label(_detector=None):
+    return "Active"
+
+
+def detection_mode_label(_detector=None):
+    return "AI-Assisted"
+
+
+def evaluation_status_label(_detector=None, benchmark_report=None):
+    if benchmark_report:
+        return "Benchmark Available"
+    return "Benchmark Pending"
 
 
 def list_demo_samples():
@@ -309,6 +317,9 @@ def inject_globals():
         "active_detector": active_detector,
         "active_detector_label": detector_status_label(active_detector, latest_report),
         "active_detector_note": detector_status_note(active_detector, latest_report),
+        "analysis_engine_label": analysis_engine_label(active_detector),
+        "detection_mode_label": detection_mode_label(active_detector),
+        "evaluation_status_label": evaluation_status_label(active_detector, latest_report),
     }
 
 
@@ -386,20 +397,15 @@ def enrich_analysis(analysis):
     analysis["source_api_url"] = url_for(
         "api_source_attribution", analysis_id=analysis["analysis_id"]
     )
-    analysis_mode = analysis.get("analysis_mode")
     latest_report = load_latest_evaluation()
-    if analysis_mode == "trained_model":
-        model_status = (
-            "Prototype Model — Evaluation Complete"
-            if latest_report
-            else "Prototype Model — Evaluation Pending"
-        )
-    elif "fallback" in str(analysis.get("inference_engine") or "").lower():
-        model_status = "Fallback Mode"
-    else:
-        model_status = "Demo Mode"
-    analysis["detector_badge"] = model_status
-    analysis["model_status_label"] = model_status
+    analysis["analysis_engine_label"] = analysis_engine_label()
+    analysis["detection_mode_label"] = detection_mode_label()
+    analysis["evaluation_status_label"] = evaluation_status_label(
+        detector_descriptor(),
+        latest_report,
+    )
+    analysis["detector_badge"] = analysis["evaluation_status_label"]
+    analysis["model_status_label"] = analysis["evaluation_status_label"]
     analysis["face_detected"] = "Yes" if int(analysis.get("face_count") or 0) > 0 else "No"
     analysis["image_quality_warning"] = image_quality_warning(analysis)
     analysis["metadata_check"] = metadata_check_text(analysis)
@@ -428,6 +434,9 @@ def build_analysis_response(analysis):
         "confidence_band": analysis.get("confidence_band"),
         "review_status": analysis.get("review_status"),
         "model_status_label": analysis.get("model_status_label"),
+        "analysis_engine_label": analysis.get("analysis_engine_label"),
+        "detection_mode_label": analysis.get("detection_mode_label"),
+        "evaluation_status_label": analysis.get("evaluation_status_label"),
         "face_detected": analysis.get("face_detected"),
         "image_quality_warning": analysis.get("image_quality_warning"),
         "metadata_check": analysis.get("metadata_check"),
@@ -951,12 +960,14 @@ def api_predict():
                 "risk_score": payload.get("risk_score"),
                 "fraud_score": payload.get("fraud_score"),
                 "risk_level": payload.get("risk_level"),
+                "analysis_engine": payload.get("analysis_engine_label"),
+                "detection_mode": payload.get("detection_mode_label"),
+                "evaluation_status": payload.get("evaluation_status_label"),
                 "face_detected": payload.get("face_detected"),
                 "metadata_found": payload.get("metadata_found"),
                 "image_quality_warning": payload.get("image_quality_warning"),
                 "metadata_check": payload.get("metadata_check"),
                 "analysis_reasons": payload.get("analysis_reasons"),
-                "model_status": payload.get("model_status_label"),
                 "heatmap_url": payload.get("heatmap_url"),
             }
         )

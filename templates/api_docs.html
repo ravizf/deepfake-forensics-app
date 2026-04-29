@@ -26,11 +26,13 @@
       <li><code>confidence</code></li>
       <li><code>risk_score</code></li>
       <li><code>risk_level</code></li>
+      <li><code>analysis_engine</code></li>
+      <li><code>detection_mode</code></li>
+      <li><code>evaluation_status</code></li>
       <li><code>face_detected</code></li>
       <li><code>metadata_found</code></li>
       <li><code>metadata_check</code></li>
       <li><code>analysis_reasons</code></li>
-      <li><code>model_status</code></li>
       <li><code>heatmap_url</code></li>
     </ul>
   </article>
@@ -54,14 +56,16 @@
   "confidence": 98.22,
   "risk_score": 9.78,
   "risk_level": "Low",
+  "analysis_engine": "Active",
+  "detection_mode": "AI-Assisted",
+  "evaluation_status": "Benchmark Pending",
   "face_detected": "Yes",
   "metadata_found": "No",
   "metadata_check": "No EXIF metadata found. This can happen in edited, compressed, or AI-generated images.",
   "analysis_reasons": [
-    "Face detected and analyzed for blending or texture anomalies.",
-    "Texture inconsistency and sensor-noise mismatch raised the artifact score."
+    "Texture inconsistency detected.",
+    "Metadata missing."
   ],
-  "model_status": "Prototype Model — Evaluation Pending",
   "heatmap_url": "/public/artifacts/heatmaps/example.png"
 }</code></pre>
 </section>

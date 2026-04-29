@@ -29,7 +29,9 @@
       <li>Binary result: {{ analysis.binary_prediction or analysis.prediction }}</li>
       <li>Confidence: {{ analysis.confidence }}%</li>
       <li>Confidence band: {{ analysis.confidence_band or "N/A" }}</li>
-      <li>Model status: {{ analysis.model_status_label }}</li>
+      <li>Analysis Engine: {{ analysis.analysis_engine_label }}</li>
+      <li>Detection Mode: {{ analysis.detection_mode_label }}</li>
+      <li>Evaluation Status: {{ analysis.evaluation_status_label }}</li>
       <li>Detector used: {{ analysis.inference_engine }}</li>
       <li>Model version: {{ analysis.model_version or "N/A" }}</li>
       <li>Dataset version: {{ analysis.dataset_version or "N/A" }}</li>

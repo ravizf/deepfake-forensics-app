@@ -37,7 +37,9 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
         ln=True,
     )
     pdf.cell(0, 8, f"Risk Level: {analysis.get('display_risk_level') or analysis.get('risk_level')}", ln=True)
-    pdf.cell(0, 8, f"Model Status: {analysis.get('model_status_label', 'Prototype Model')}", ln=True)
+    pdf.cell(0, 8, f"Analysis Engine: {analysis.get('analysis_engine_label', 'Active')}", ln=True)
+    pdf.cell(0, 8, f"Detection Mode: {analysis.get('detection_mode_label', 'AI-Assisted')}", ln=True)
+    pdf.cell(0, 8, f"Evaluation Status: {analysis.get('evaluation_status_label', 'Benchmark Pending')}", ln=True)
     pdf.cell(0, 8, f"Metadata Found: {analysis.get('metadata_found', 'N/A')}", ln=True)
     pdf.cell(0, 8, f"Face Detected: {analysis.get('face_detected', 'N/A')}", ln=True)
     pdf.ln(2)

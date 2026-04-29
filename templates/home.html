@@ -2,93 +2,34 @@
 {% block content %}
 <section class="hero">
   <div class="hero-copy">
-    <p class="eyebrow">AI-Assisted Deepfake Image Detection</p>
+    <p class="eyebrow">AI-Assisted Deepfake Image Detection Platform</p>
     <h1>SnapTrace Forensics</h1>
     <p class="lead">
-      Upload an image and get a real/fake prediction, confidence score, risk score,
-      metadata analysis, heatmap evidence, and a PDF forensic-style report.
+      Upload an image and get prediction, confidence score, metadata notes, visual explanation, and PDF report.
     </p>
     <div class="status-strip">
       <span class="status-pill">Model: {{ active_detector_label }}</span>
       <span class="muted">{{ active_detector_note }}</span>
     </div>
     <div class="hero-actions">
-      <a class="button-link" href="{{ url_for('demo_page') }}">Try Demo Without Login</a>
+      <a class="button-link" href="{{ url_for('demo_page') }}">Try Demo</a>
       <a class="ghost-link" href="{{ url_for('upload_page') }}">Upload Image</a>
-      {% if current_user %}
-        <a class="ghost-link" href="{{ url_for('dashboard') }}">Open Dashboard</a>
-      {% endif %}
+      <a class="ghost-link" href="{{ url_for('model_info_page') }}">Model Info</a>
     </div>
   </div>
   <article class="panel">
-    <ul class="clean-list">
-      <li>Real / Fake / Uncertain prediction</li>
-      <li>Confidence score and risk score</li>
-      <li>Metadata analysis and face detection summary</li>
-      <li>Heatmap-style visual evidence</li>
-      <li>Downloadable PDF forensic-style report</li>
-    </ul>
+    <h2>Prototype Output</h2>
+    <p class="lead">Real/Fake/Uncertain result, confidence score, metadata notes, visual explanation, and downloadable PDF report.</p>
   </article>
 </section>
 
-<section class="grid three-up">
-  <article class="panel">
-    <h2>Prediction</h2>
-    <p>Reviewer-facing result output with real, fake, or uncertain labels plus confidence.</p>
-  </article>
-  <article class="panel">
-    <h2>Risk</h2>
-    <p>Risk score combines model output, metadata presence, and face detection context.</p>
-  </article>
-  <article class="panel">
-    <h2>Report</h2>
-    <p>Download a prototype report and review history from the analyst dashboard.</p>
-  </article>
-</section>
-
-<section class="panel" id="demo-samples">
-  <h2>Try Demo Without Login</h2>
-  <p class="lead">
-    Reviewers can test real and AI-generated sample images without creating an account.
-  </p>
-  {% if demo_samples %}
-    <div class="grid two-up">
-      {% for sample in demo_samples %}
-        <article class="panel demo-card">
-          <p class="eyebrow">{{ sample.title }}</p>
-          <img src="{{ sample.preview_url }}" alt="{{ sample.filename }}">
-          <h3>{{ sample.filename }}</h3>
-          <p class="muted">Runs through the public prototype flow and opens the result page directly.</p>
-          <a class="button-link" href="{{ url_for('run_demo_sample', sample_id=sample.id) }}">Analyze Demo Sample</a>
-        </article>
-      {% endfor %}
-    </div>
-    <div class="hero-actions">
-      <a class="ghost-link" href="{{ url_for('demo_page') }}">Open Full Demo Page</a>
-    </div>
-  {% else %}
-    <p class="muted">Demo samples are not installed in this deployment yet.</p>
-  {% endif %}
-</section>
-
-<section class="grid two-up">
-  <article class="panel">
-    <h2>Model Evaluation</h2>
-    <ul class="clean-list">
-      <li>Dataset: {{ benchmark_summary.test_dataset }}</li>
-      <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
-      <li>Precision: {{ benchmark_summary.precision }}</li>
-      <li>Recall: {{ benchmark_summary.recall }}</li>
-      <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
-    </ul>
-    <a class="ghost-link" href="{{ url_for('model_info_page') }}">View Model Info</a>
-  </article>
-
-  <article class="panel">
-    <h2>Important Note</h2>
-    <p class="lead">
-      This system is a research prototype and should not be treated as legal proof.
-    </p>
-  </article>
+<section class="panel">
+  <h2>Benchmark</h2>
+  <ul class="clean-list">
+    <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
+    <li>Precision: {{ benchmark_summary.precision }}</li>
+    <li>Recall: {{ benchmark_summary.recall }}</li>
+    <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
+  </ul>
 </section>
 {% endblock %}

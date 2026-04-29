@@ -88,7 +88,11 @@ for folder in (
 
 init_db()
 
-DEMO_SAMPLE_ROOT = Path(app.root_path) / "static" / "demo-samples"
+DEMO_SAMPLE_ROOTS = [
+    Path(app.root_path) / "static" / "demo-samples",
+    Path(app.root_path) / "static" / "demo",
+    Path(app.root_path) / "dataset" / "test",
+]
 DEMO_SAMPLE_LIMIT_PER_CLASS = 2
 
 
@@ -102,7 +106,7 @@ def current_user():
 def detector_status_label(detector, benchmark_report=None):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
         if not benchmark_report:
-            return "Prototype Model / Evaluation Pending"
+            return "Prototype Model — Evaluation Pending"
         return "Trained Model"
     if detector.get("status") == "error":
         return "Fallback Mode"
@@ -113,7 +117,7 @@ def detector_status_note(detector, benchmark_report=None):
     label = detector_status_label(detector, benchmark_report)
     if label == "Trained Model":
         return "Checkpoint loaded with calibrated scoring."
-    if label == "Prototype Model / Evaluation Pending":
+    if label == "Prototype Model — Evaluation Pending":
         return "Checkpoint is loaded, but benchmark metrics have not been published yet."
     if label == "Fallback Mode":
         return "Checkpoint unavailable or incompatible, so the demo fallback is active."
@@ -126,11 +130,21 @@ def list_demo_samples():
         "real": "Real sample",
         "fake": "AI-generated sample",
     }
+    sample_roots = [root for root in DEMO_SAMPLE_ROOTS if root.is_dir()]
     for label, title in label_map.items():
-        sample_dir = DEMO_SAMPLE_ROOT / label
-        if not sample_dir.is_dir():
-            continue
-        for path in sorted(p for p in sample_dir.iterdir() if p.is_file())[:DEMO_SAMPLE_LIMIT_PER_CLASS]:
+        files = []
+        for root in sample_roots:
+            sample_dir = root / label
+            if sample_dir.is_dir():
+                files = sorted(p for p in sample_dir.iterdir() if p.is_file())
+                if files:
+                    break
+        for path in files[:DEMO_SAMPLE_LIMIT_PER_CLASS]:
+            preview_url = None
+            if "static" in path.parts:
+                static_index = path.parts.index("static") + 1
+                static_path = "/".join(path.parts[static_index:])
+                preview_url = url_for("static", filename=static_path)
             samples.append(
                 {
                     "id": f"{label}-{path.stem}",
@@ -138,10 +152,7 @@ def list_demo_samples():
                     "title": title,
                     "filename": path.name,
                     "path": path,
-                    "preview_url": url_for(
-                        "static",
-                        filename=f"demo-samples/{label}/{path.name}",
-                    ),
+                    "preview_url": preview_url,
                 }
             )
     return samples
@@ -160,11 +171,11 @@ def benchmark_summary(report, detector=None):
         if detector:
             dataset_name = detector.get("dataset_version")
         return {
-            "accuracy": "Evaluation pending",
-            "precision": "Evaluation pending",
-            "recall": "Evaluation pending",
-            "f1_score": "Evaluation pending",
-            "test_dataset": dataset_name or "Evaluation pending",
+            "accuracy": "Evaluation Pending",
+            "precision": "Evaluation Pending",
+            "recall": "Evaluation Pending",
+            "f1_score": "Evaluation Pending",
+            "test_dataset": dataset_name or "Evaluation Pending",
         }
 
     precision = float(report.get("ai_metrics", {}).get("precision") or 0.0)
@@ -382,7 +393,7 @@ def enrich_analysis(analysis):
         model_status = (
             "Trained Model"
             if latest_report
-            else "Prototype Model / Evaluation Pending"
+            else "Prototype Model — Evaluation Pending"
         )
     elif "fallback" in str(analysis.get("inference_engine") or "").lower():
         model_status = "Fallback Mode"

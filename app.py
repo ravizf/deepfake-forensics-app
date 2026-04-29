@@ -54,9 +54,9 @@ from evaluation import (
     load_latest_evaluation,
     run_evaluation,
 )
-from inference_engine import final_label
 from metadata_utils import extract_media_metadata as read_media_metadata
 from model_loader import detector_descriptor
+from risk_engine import calculate_risk_score
 from forensics import (
     allowed_file,
     analyze_media_file,
@@ -102,7 +102,7 @@ def current_user():
 def detector_status_label(detector, benchmark_report=None):
     if detector.get("mode") == "trained_model" and detector.get("status") == "loaded":
         if not benchmark_report:
-            return "Prototype trained checkpoint / evaluation pending"
+            return "Prototype Model / Evaluation Pending"
         return "Trained Model"
     if detector.get("status") == "error":
         return "Fallback Mode"
@@ -113,7 +113,7 @@ def detector_status_note(detector, benchmark_report=None):
     label = detector_status_label(detector, benchmark_report)
     if label == "Trained Model":
         return "Checkpoint loaded with calibrated scoring."
-    if label == "Prototype trained checkpoint / evaluation pending":
+    if label == "Prototype Model / Evaluation Pending":
         return "Checkpoint is loaded, but benchmark metrics have not been published yet."
     if label == "Fallback Mode":
         return "Checkpoint unavailable or incompatible, so the demo fallback is active."
@@ -250,10 +250,13 @@ def analysis_reasons(analysis):
 
 
 def fraud_score_and_risk(analysis):
-    score = float(analysis.get("fake_prob") or 0.0)
-    score = max(0.0, min(100.0, score))
-    _, risk = final_label(score / 100.0)
-    return round(score, 2), risk
+    metadata_found = analysis.get("metadata_found") or "No"
+    face_detected = int(analysis.get("face_count") or 0) > 0
+    return calculate_risk_score(
+        analysis.get("fake_prob") or 0.0,
+        metadata_found,
+        face_detected=face_detected,
+    )
 
 
 def ensure_public_demo_case(analysis):
@@ -274,7 +277,9 @@ def enrich_public_demo_analysis(analysis):
         )
     analysis["evidence_url"] = url_for("public_evidence_page", analysis_id=analysis["analysis_id"])
     analysis["report_url"] = None
-    analysis["report_download_url"] = None
+    analysis["report_download_url"] = url_for(
+        "public_download_report", analysis_id=analysis["analysis_id"]
+    )
     analysis["report_artifact_url"] = None
     return analysis
 
@@ -377,7 +382,7 @@ def enrich_analysis(analysis):
         model_status = (
             "Trained Model"
             if latest_report
-            else "Prototype trained checkpoint / evaluation pending"
+            else "Prototype Model / Evaluation Pending"
         )
     elif "fallback" in str(analysis.get("inference_engine") or "").lower():
         model_status = "Fallback Mode"
@@ -391,12 +396,12 @@ def enrich_analysis(analysis):
     analysis["metadata_summary"] = extract_media_metadata(analysis)
     analysis["metadata_found"] = "Yes" if analysis["metadata_summary"].get("exif_present") else "No"
     analysis["analysis_reasons"] = analysis_reasons(analysis)
-    analysis["fraud_score"], analysis["risk_level"] = fraud_score_and_risk(analysis)
-    _display_prediction, display_risk = final_label((analysis.get("fake_prob") or 0.0) / 100.0)
+    analysis["risk_score"], analysis["risk_level"] = fraud_score_and_risk(analysis)
+    analysis["fraud_score"] = analysis["risk_score"]
     analysis["display_prediction"] = (
         str(analysis.get("prediction") or "").replace("AI-Generated", "AI Generated")
     )
-    analysis["display_risk_level"] = display_risk
+    analysis["display_risk_level"] = analysis["risk_level"]
     analysis["prototype_notice"] = "This is not legal proof, only AI-assisted analysis."
     return analysis
 
@@ -419,6 +424,7 @@ def build_analysis_response(analysis):
         "metadata_summary": analysis.get("metadata_summary"),
         "metadata_found": analysis.get("metadata_found"),
         "analysis_reasons": analysis.get("analysis_reasons"),
+        "risk_score": analysis.get("risk_score", analysis.get("fraud_score")),
         "fraud_score": analysis.get("fraud_score"),
         "risk_level": analysis.get("display_risk_level") or analysis.get("risk_level"),
         "prototype_notice": analysis.get("prototype_notice"),
@@ -612,6 +618,32 @@ def model_page():
         detector_status=detector_status,
         latest_report=latest_report,
         benchmark_summary=benchmark_summary(latest_report, detector_status),
+    )
+
+
+@app.route("/model-info")
+def model_info_page():
+    return model_page()
+
+
+@app.route("/demo")
+def demo_page():
+    latest_report = load_latest_evaluation()
+    active_detector = detector_descriptor()
+    return render_template(
+        "demo.html",
+        title="Try Demo",
+        demo_samples=list_demo_samples(),
+        benchmark_summary=benchmark_summary(latest_report, active_detector),
+    )
+
+
+@app.route("/api-docs")
+def api_docs_page():
+    return render_template(
+        "api_docs.html",
+        title="API Docs",
+        public_api_enabled=app.config["PUBLIC_API_ENABLED"],
     )
 
 
@@ -906,6 +938,7 @@ def api_predict():
                 "raw_prediction": payload.get("raw_prediction"),
                 "binary_prediction": payload.get("binary_prediction"),
                 "confidence": payload["confidence"],
+                "risk_score": payload.get("risk_score"),
                 "fraud_score": payload.get("fraud_score"),
                 "risk_level": payload.get("risk_level"),
                 "face_detected": payload.get("face_detected"),
@@ -968,6 +1001,19 @@ def public_evidence_page(analysis_id):
         title="Demo Visual Evidence",
         analysis=analysis,
         public_demo=True,
+    )
+
+
+@app.route("/demo/download/report/<int:analysis_id>")
+def public_download_report(analysis_id):
+    analysis = get_analysis_detail(analysis_id)
+    ensure_public_demo_case(analysis)
+    refreshed = ensure_report_record(analysis)
+    analysis = enrich_analysis(refreshed)
+    return send_file(
+        analysis["report_path"],
+        as_attachment=True,
+        download_name=os.path.basename(analysis["report_path"]),
     )
 
 

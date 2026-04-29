@@ -2,9 +2,9 @@
 {% block content %}
 <section class="section-header">
   <div>
-    <p class="eyebrow">Model Details</p>
-    <h1>Model / Dataset Page</h1>
-    <p class="lead">Architecture, dataset, benchmark snapshot, and known limitations for the active prototype detector.</p>
+    <p class="eyebrow">Model Evaluation</p>
+    <h1>Prototype model, dataset, and benchmark snapshot.</h1>
+    <p class="lead">Use this page to explain what checkpoint is loaded, what data has been benchmarked, and where the current prototype still has limitations.</p>
   </div>
 </section>
 
@@ -24,6 +24,7 @@
       <li>Dataset: {{ benchmark_summary.test_dataset }}</li>
       <li>Training date: {{ detector_status.training_date or "N/A" }}</li>
       <li>Calibration: {{ detector_status.calibration_method or "N/A" }}{% if detector_status.temperature is not none %} (temperature={{ detector_status.temperature }}){% endif %}</li>
+      <li>Public status: {{ active_detector_label }}</li>
     </ul>
   </article>
 

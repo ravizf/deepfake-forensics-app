@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">API Docs</p>
+    <h1>Developer-facing endpoints for the SnapTrace prototype.</h1>
+    <p class="lead">Use the public prediction API for demo integrations, then move to the authenticated endpoints for analyst workflows and case retrieval.</p>
+  </div>
+</section>
+
+<section class="grid three-up">
+  <article class="metric-card"><span>Public API</span><strong>{% if public_api_enabled %}Enabled{% else %}Disabled{% endif %}</strong></article>
+  <article class="metric-card"><span>Main Predict Route</span><strong>POST /predict</strong></article>
+  <article class="metric-card"><span>Upload Field</span><strong>multipart: file</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>POST /predict</h2>
+    <p class="muted">Public prototype endpoint for quick demo integrations.</p>
+    <pre><code>curl -X POST "{{ request.url_root.rstrip('/') }}/predict" \
+  -F "file=@sample.jpg"</code></pre>
+    <h3>Response fields</h3>
+    <ul class="clean-list">
+      <li><code>prediction</code></li>
+      <li><code>confidence</code></li>
+      <li><code>risk_score</code></li>
+      <li><code>risk_level</code></li>
+      <li><code>face_detected</code></li>
+      <li><code>metadata_found</code></li>
+      <li><code>metadata_check</code></li>
+      <li><code>analysis_reasons</code></li>
+      <li><code>model_status</code></li>
+      <li><code>heatmap_url</code></li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Additional Endpoints</h2>
+    <ul class="clean-list">
+      <li><code>POST /api/public-analyze</code> returns the full public analysis payload.</li>
+      <li><code>GET /health</code> returns a simple service heartbeat.</li>
+      <li><code>GET /api/health</code> returns detector status and public API state.</li>
+      <li><code>POST /api/analyze</code> is the authenticated upload API for signed-in analysts.</li>
+      <li><code>GET /api/model-status</code> exposes the active detector descriptor for logged-in users.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Example Response</h2>
+  <pre><code>{
+  "prediction": "Real",
+  "confidence": 98.22,
+  "risk_score": 9.78,
+  "risk_level": "Low",
+  "face_detected": "Yes",
+  "metadata_found": "No",
+  "metadata_check": "No EXIF metadata found. This can happen in edited, compressed, or AI-generated images.",
+  "analysis_reasons": [
+    "Face detected and analyzed for blending or texture anomalies.",
+    "Texture inconsistency and sensor-noise mismatch raised the artifact score."
+  ],
+  "model_status": "Prototype Model / Evaluation Pending",
+  "heatmap_url": "/public/artifacts/heatmaps/example.png"
+}</code></pre>
+</section>
+{% endblock %}

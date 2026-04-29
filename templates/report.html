@@ -17,7 +17,7 @@
       <li>Prediction: {{ analysis.display_prediction or analysis.prediction }}</li>
       <li>Binary Result: {{ analysis.display_prediction or analysis.binary_prediction or analysis.prediction }}</li>
       <li>Confidence: {{ analysis.confidence }}%</li>
-      <li>Fraud score: {{ analysis.fraud_score }}/100</li>
+      <li>Risk score: {{ analysis.risk_score or analysis.fraud_score }}/100</li>
       <li>Risk level: {{ analysis.risk_level }}</li>
       <li>Confidence Band: {{ analysis.confidence_band or "N/A" }}</li>
       <li>Review Status: {{ analysis.review_status or "N/A" }}</li>

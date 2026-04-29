@@ -2,66 +2,54 @@
 {% block content %}
 <section class="hero">
   <div class="hero-copy">
-    <p class="eyebrow">Research Prototype</p>
+    <p class="eyebrow">AI-Assisted Deepfake Image Detection</p>
     <h1>SnapTrace Forensics</h1>
     <p class="lead">
-      AI-assisted deepfake image analysis platform.
-    </p>
-    <p class="lead">
-      Upload an image, get real/fake prediction, confidence score, metadata check,
-      visual evidence, and forensic-style report.
-      This system is a research prototype and should not be treated as legal proof.
+      Upload an image and get a real/fake prediction, confidence score, risk score,
+      metadata analysis, heatmap evidence, and a PDF forensic-style report.
     </p>
     <div class="status-strip">
       <span class="status-pill">Model: {{ active_detector_label }}</span>
       <span class="muted">{{ active_detector_note }}</span>
     </div>
     <div class="hero-actions">
+      <a class="button-link" href="{{ url_for('demo_page') }}">Try Demo Without Login</a>
+      <a class="ghost-link" href="{{ url_for('upload_page') }}">Upload Image</a>
       {% if current_user %}
-        <a class="button-link" href="{{ url_for('upload_page') }}">Start New Analysis</a>
         <a class="ghost-link" href="{{ url_for('dashboard') }}">Open Dashboard</a>
-      {% else %}
-        <a class="button-link" href="#demo-samples">Try Demo Without Login</a>
-        <a class="button-link" href="{{ url_for('register') }}">Create Account</a>
-        <a class="ghost-link" href="{{ url_for('login') }}">Sign In</a>
       {% endif %}
     </div>
   </div>
-  <div class="hero-panel">
-    <div class="metric-card">
-      <span>Prediction</span>
-      <strong>Real / Fake / Uncertain</strong>
-    </div>
-    <div class="metric-card">
-      <span>Model Status</span>
-      <strong>{{ active_detector_label }}</strong>
-    </div>
-    <div class="metric-card">
-      <span>Outputs</span>
-      <strong>Confidence, metadata check, visual evidence, and report</strong>
-    </div>
-  </div>
+  <article class="panel">
+    <ul class="clean-list">
+      <li>Real / Fake / Uncertain prediction</li>
+      <li>Confidence score and risk score</li>
+      <li>Metadata analysis and face detection summary</li>
+      <li>Heatmap-style visual evidence</li>
+      <li>Downloadable PDF forensic-style report</li>
+    </ul>
+  </article>
 </section>
 
 <section class="grid three-up">
   <article class="panel">
-    <h2>Upload</h2>
-    <p>Analyze suspicious images with the trained model or prototype fallback.</p>
+    <h2>Prediction</h2>
+    <p>Reviewer-facing result output with real, fake, or uncertain labels plus confidence.</p>
   </article>
   <article class="panel">
-    <h2>Inspect</h2>
-    <p>See confidence score, face detection, metadata check, and heatmap-style evidence.</p>
+    <h2>Risk</h2>
+    <p>Risk score combines model output, metadata presence, and face detection context.</p>
   </article>
   <article class="panel">
     <h2>Report</h2>
-    <p>Download a forensic-style prototype report and review history in the dashboard.</p>
+    <p>Download a prototype report and review history from the analyst dashboard.</p>
   </article>
 </section>
 
 <section class="panel" id="demo-samples">
   <h2>Try Demo Without Login</h2>
   <p class="lead">
-    Reviewers can test sample images without creating an account. Uploading your own files still requires login.
+    Reviewers can test real and AI-generated sample images without creating an account.
   </p>
   {% if demo_samples %}
     <div class="grid two-up">
@@ -75,30 +63,32 @@
         </article>
       {% endfor %}
     </div>
+    <div class="hero-actions">
+      <a class="ghost-link" href="{{ url_for('demo_page') }}">Open Full Demo Page</a>
+    </div>
   {% else %}
     <p class="muted">Demo samples are not installed in this deployment yet.</p>
   {% endif %}
 </section>
 
-<section class="panel">
-  <h2>Dataset / Model Page Summary</h2>
-  <ul class="clean-list">
-    <li>Dataset Used: {{ benchmark_summary.test_dataset }}</li>
-    <li>Model Architecture: {{ active_detector.architecture or "Not declared in active manifest" }}</li>
-    <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
-    <li>Precision: {{ benchmark_summary.precision }}</li>
-    <li>Recall: {{ benchmark_summary.recall }}</li>
-    <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
-    <li>Limitations: This prototype can still misclassify difficult real or synthetic images and should not be treated as legal proof.</li>
-  </ul>
-  <a class="ghost-link" href="{{ url_for('model_page') }}">Open Model / Dataset Page</a>
-</section>
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Model Evaluation</h2>
+    <ul class="clean-list">
+      <li>Dataset: {{ benchmark_summary.test_dataset }}</li>
+      <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
+      <li>Precision: {{ benchmark_summary.precision }}</li>
+      <li>Recall: {{ benchmark_summary.recall }}</li>
+      <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
+    </ul>
+    <a class="ghost-link" href="{{ url_for('model_info_page') }}">View Model Info</a>
+  </article>
 
-<section class="panel">
-  <h2>Important Note</h2>
-  <p class="lead">
-    This system is a prototype forensic analysis tool. It can help reviewers prioritize suspicious media,
-    but it does not provide legal proof on its own.
-  </p>
+  <article class="panel">
+    <h2>Important Note</h2>
+    <p class="lead">
+      This system is a research prototype and should not be treated as legal proof.
+    </p>
+  </article>
 </section>
 {% endblock %}

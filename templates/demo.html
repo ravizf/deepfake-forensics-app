@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Public Demo</p>
+    <h1>Try demo samples without creating an account.</h1>
+    <p class="lead">Use these sample images to test the current prototype flow, then open the full result, heatmap, and report output.</p>
+  </div>
+</section>
+
+<section class="grid three-up">
+  <article class="metric-card"><span>Model Status</span><strong>{{ active_detector_label }}</strong></article>
+  <article class="metric-card"><span>Dataset</span><strong>{{ benchmark_summary.test_dataset }}</strong></article>
+  <article class="metric-card"><span>Accuracy</span><strong>{{ benchmark_summary.accuracy }}</strong></article>
+</section>
+
+<section class="panel">
+  <h2>Demo Samples</h2>
+  {% if demo_samples %}
+    <div class="grid two-up">
+      {% for sample in demo_samples %}
+        <article class="panel demo-card">
+          <p class="eyebrow">{{ sample.title }}</p>
+          <img src="{{ sample.preview_url }}" alt="{{ sample.filename }}">
+          <h3>{{ sample.filename }}</h3>
+          <p class="muted">Expected class: {{ sample.label|title }}</p>
+          <a class="button-link" href="{{ url_for('run_demo_sample', sample_id=sample.id) }}">Analyze Demo Sample</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">Demo samples are not installed in this deployment yet.</p>
+  {% endif %}
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>What you will see</h2>
+    <ul class="clean-list">
+      <li>Prediction: Real, Fake, or Uncertain</li>
+      <li>Confidence score and risk level</li>
+      <li>Metadata summary and face-detection context</li>
+      <li>Heatmap-style visual evidence</li>
+      <li>Downloadable PDF prototype report</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Important Note</h2>
+    <p class="lead">This demo is for review and presentation only. It is a research prototype and should not be treated as legal proof.</p>
+  </article>
+</section>
+{% endblock %}

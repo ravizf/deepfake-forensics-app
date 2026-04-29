@@ -30,6 +30,12 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
     pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True)
     pdf.cell(0, 8, f"Prediction: {analysis.get('display_prediction') or analysis.get('prediction')}", ln=True)
     pdf.cell(0, 8, f"Confidence: {analysis.get('confidence', 'N/A')}%", ln=True)
+    pdf.cell(
+        0,
+        8,
+        f"Risk Score: {analysis.get('risk_score', analysis.get('fraud_score', 'N/A'))}/100",
+        ln=True,
+    )
     pdf.cell(0, 8, f"Risk Level: {analysis.get('display_risk_level') or analysis.get('risk_level')}", ln=True)
     pdf.cell(0, 8, f"Model Status: {analysis.get('model_status_label', 'N/A')}", ln=True)
     pdf.cell(0, 8, f"Metadata Found: {analysis.get('metadata_found', 'N/A')}", ln=True)
@@ -56,6 +62,17 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
         try:
             pdf.ln(3)
             pdf.image(image_path, x=10, w=80)
+        except Exception:
+            pass
+
+    heatmap_path = analysis.get("heatmap_path")
+    if heatmap_path and os.path.exists(heatmap_path):
+        try:
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 8, "Heatmap Evidence", ln=True)
+            pdf.ln(2)
+            pdf.image(heatmap_path, x=10, w=170)
         except Exception:
             pass
 

@@ -5,7 +5,9 @@
     <p class="eyebrow">Visual Evidence</p>
     <h1>Prototype visual explanation for case #{{ analysis.analysis_id }}</h1>
   </div>
-  {% if not public_demo and analysis.report_url %}
+  {% if analysis.report_download_url %}
+    <a class="button-link" href="{{ analysis.report_download_url }}">Download Report</a>
+  {% elif not public_demo and analysis.report_url %}
     <a class="button-link" href="{{ analysis.report_url }}">View Report</a>
   {% endif %}
 </section>

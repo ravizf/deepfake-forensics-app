@@ -16,6 +16,7 @@
             <th>Case</th>
             <th>Prediction</th>
             <th>Confidence</th>
+            <th>Risk</th>
             <th>Detector</th>
             <th>Source</th>
             <th>Analyst</th>
@@ -28,6 +29,7 @@
               <td>{{ case.original_filename }}</td>
               <td>{{ case.display_prediction or case.prediction }}</td>
               <td>{{ case.confidence }}%</td>
+              <td>{{ case.risk_level }}</td>
               <td>{{ case.detector_version }}<br><span class="muted">{{ case.detector_badge }}</span></td>
               <td>{{ case.source_model }}</td>
               <td>{{ case.full_name }}</td>
@@ -35,6 +37,9 @@
                 <a href="{{ case.result_url }}">Result</a>
                 <a href="{{ case.evidence_url }}">Heatmap</a>
                 <a href="{{ case.report_url }}">Report</a>
+                {% if case.report_download_url %}
+                  <a href="{{ case.report_download_url }}">Download</a>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

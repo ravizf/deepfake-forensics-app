@@ -276,7 +276,7 @@ def metadata_check_text(analysis):
         return metadata["warning"]
     return (
         "No EXIF metadata found. This can happen in edited, compressed, camera-exported, "
-        "or AI-generated images. Missing metadata alone does not mean fake."
+        "or AI-generated images. Missing metadata alone does not confirm manipulation."
     )
 
 

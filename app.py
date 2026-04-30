@@ -245,7 +245,7 @@ def image_quality_warning(analysis):
 
     face_count = int(analysis.get("face_count") or 0)
     if face_count == 0:
-        return "No clear face was detected, so this result relied on full-image analysis only."
+        return "Image-level visual patterns analyzed."
     if analysis.get("confidence_band") in {"Low", "Review Required"}:
         return "Low-confidence image. Compression, blur, or weak facial detail may reduce reliability."
     return "No major image-quality warning was triggered during this run."
@@ -274,7 +274,10 @@ def metadata_check_text(analysis):
         return " | ".join(parts)
     if metadata["warning"]:
         return metadata["warning"]
-    return "No EXIF metadata found. This can happen in edited, compressed, or AI-generated images."
+    return (
+        "No EXIF metadata found. This can happen in edited, compressed, camera-exported, "
+        "or AI-generated images. Missing metadata alone does not mean fake."
+    )
 
 
 def analysis_reasons(analysis):
@@ -287,7 +290,7 @@ def analysis_reasons(analysis):
     if face_count > 0:
         reasons.append("Face texture inconsistency detected.")
     else:
-        reasons.append("Whole-image visual patterns were used because no clear face was detected.")
+        reasons.append("Image-level visual patterns analyzed.")
 
     if detector_breakdown.get("frequency_detector", 0) >= 0.55:
         reasons.append("Compression artifacts observed.")
@@ -309,6 +312,22 @@ def analysis_reasons(analysis):
             reasons.append("The model score leaned toward natural-photo characteristics.")
 
     return reasons[:4]
+
+
+def decision_summary(analysis):
+    prediction = str(analysis.get("display_prediction") or analysis.get("prediction") or "")
+    risk_level = str(analysis.get("risk_level") or "").lower()
+    confidence = float(analysis.get("confidence") or 0.0)
+
+    if prediction == "Real" and risk_level == "low":
+        return "Low risk because visual score strongly favors Real."
+    if prediction == "AI Generated" and risk_level == "high":
+        return "High risk because visual score strongly favors AI-generated patterns."
+    if prediction == "Uncertain":
+        return "Review needed because the visual score is not strongly separated."
+    if confidence >= 75:
+        return f"{analysis.get('risk_level', 'Medium')} risk because the visual score shows a clear lead."
+    return "Review recommended because the visual score and supporting signals are mixed."
 
 
 def fraud_score_and_risk(analysis):
@@ -469,6 +488,7 @@ def enrich_analysis(analysis):
         str(analysis.get("prediction") or "").replace("AI-Generated", "AI Generated")
     )
     analysis["display_risk_level"] = analysis["risk_level"]
+    analysis["decision_summary"] = decision_summary(analysis)
     analysis["prototype_notice"] = "This is AI-assisted analysis and not legal proof."
     return analysis
 
@@ -497,6 +517,7 @@ def build_analysis_response(analysis):
         "risk_score": analysis.get("risk_score", analysis.get("fraud_score")),
         "fraud_score": analysis.get("fraud_score"),
         "risk_level": analysis.get("display_risk_level") or analysis.get("risk_level"),
+        "decision_summary": analysis.get("decision_summary"),
         "prototype_notice": analysis.get("prototype_notice"),
         "fake_prob": analysis.get("fake_prob"),
         "real_prob": analysis.get("real_prob"),

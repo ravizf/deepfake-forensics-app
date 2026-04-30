@@ -36,6 +36,7 @@
 
   <article class="panel">
     <h2>Why this result</h2>
+    <p><strong>Decision:</strong> {{ analysis.decision_summary }}</p>
     <ul class="clean-list">
       {% for item in analysis.analysis_reasons or [] %}
         <li>{{ item }}</li>

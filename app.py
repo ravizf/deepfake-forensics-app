@@ -1,6 +1,7 @@
 import os
 import hashlib
 import mimetypes
+import json
 from functools import wraps
 from io import BytesIO
 from pathlib import Path
@@ -94,6 +95,7 @@ DEMO_SAMPLE_ROOTS = [
     Path(app.root_path) / "dataset" / "test",
 ]
 DEMO_SAMPLE_LIMIT_PER_CLASS = 2
+MODEL_METRICS_PATH = Path(app.root_path) / "model_metrics.json"
 
 
 def current_user():
@@ -123,11 +125,11 @@ def analysis_engine_label(_detector=None):
 
 
 def detection_mode_label(_detector=None):
-    return "AI-Assisted"
+    return "AI-Assisted Prototype"
 
 
-def evaluation_status_label(_detector=None, benchmark_report=None):
-    if benchmark_report:
+def evaluation_status_label(_detector=None, benchmark_report=None, metrics_report=None):
+    if benchmark_report or metrics_report:
         return "Benchmark Available"
     return "Benchmark Pending"
 
@@ -142,6 +144,14 @@ def list_demo_samples():
     for label, title in label_map.items():
         files = []
         for root in sample_roots:
+            canonical_files = [
+                root / f"{label}1.jpg",
+                root / f"{label}2.jpg",
+            ]
+            existing_canonical = [path for path in canonical_files if path.is_file()]
+            if existing_canonical:
+                files = existing_canonical
+                break
             sample_dir = root / label
             if sample_dir.is_dir():
                 files = sorted(p for p in sample_dir.iterdir() if p.is_file())
@@ -193,6 +203,40 @@ def benchmark_summary(report, detector=None):
         "f1_score": f"{round(f1_score, 2)}%",
         "test_dataset": report.get("dataset_version") or detector.get("dataset_version") or "Not declared",
     }
+
+
+def load_model_metrics():
+    if not MODEL_METRICS_PATH.exists():
+        return None
+    try:
+        return json.loads(MODEL_METRICS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def training_metrics_summary(metrics_report, benchmark_report=None, detector=None):
+    architecture = (detector or {}).get("architecture")
+    model_name = {
+        "efficientnet_b0_binary": "EfficientNet-B0",
+        "resnet50_binary": "ResNet-50",
+        "resnet18_binary": "ResNet-18",
+    }.get(architecture, architecture or "EfficientNet-B0")
+
+    if metrics_report:
+        return {
+            "accuracy": f"{metrics_report.get('accuracy', 'Pending')}%",
+            "precision": f"{metrics_report.get('precision', 'Pending')}%",
+            "recall": f"{metrics_report.get('recall', 'Pending')}%",
+            "f1_score": f"{metrics_report.get('f1_score', 'Pending')}%",
+            "test_dataset": metrics_report.get("dataset_version") or "Benchmark Available After Training",
+            "model_name": metrics_report.get("model") or "EfficientNet-B0",
+            "evaluation_split": metrics_report.get("evaluation_split") or "val",
+        }
+
+    fallback = benchmark_summary(benchmark_report, detector)
+    fallback["model_name"] = model_name
+    fallback["evaluation_split"] = "evaluation"
+    return fallback
 
 
 def image_quality_warning(analysis):
@@ -311,6 +355,7 @@ def load_user():
 def inject_globals():
     active_detector = detector_descriptor()
     latest_report = load_latest_evaluation()
+    metrics_report = load_model_metrics()
     return {
         "current_user": g.get("current_user"),
         "app_name": "SnapTrace Forensics",
@@ -319,7 +364,11 @@ def inject_globals():
         "active_detector_note": detector_status_note(active_detector, latest_report),
         "analysis_engine_label": analysis_engine_label(active_detector),
         "detection_mode_label": detection_mode_label(active_detector),
-        "evaluation_status_label": evaluation_status_label(active_detector, latest_report),
+        "evaluation_status_label": evaluation_status_label(
+            active_detector,
+            latest_report,
+            metrics_report,
+        ),
     }
 
 
@@ -400,9 +449,11 @@ def enrich_analysis(analysis):
     latest_report = load_latest_evaluation()
     analysis["analysis_engine_label"] = analysis_engine_label()
     analysis["detection_mode_label"] = detection_mode_label()
+    metrics_report = load_model_metrics()
     analysis["evaluation_status_label"] = evaluation_status_label(
         detector_descriptor(),
         latest_report,
+        metrics_report,
     )
     analysis["detector_badge"] = analysis["evaluation_status_label"]
     analysis["model_status_label"] = analysis["evaluation_status_label"]
@@ -631,12 +682,15 @@ def home():
 def model_page():
     latest_report = load_latest_evaluation()
     detector_status = detector_descriptor()
+    metrics_report = load_model_metrics()
     return render_template(
         "model.html",
         title="Model Details",
         detector_status=detector_status,
         latest_report=latest_report,
         benchmark_summary=benchmark_summary(latest_report, detector_status),
+        training_metrics=training_metrics_summary(metrics_report, latest_report, detector_status),
+        model_metrics_report=metrics_report,
     )
 
 

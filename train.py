@@ -10,13 +10,14 @@ dataset/
   val/
     real/
     fake/
-  test/
+  test/   # optional but recommended
     real/
     fake/
 
 This script trains a PyTorch image classifier and saves:
 - deepfake_model.pth
 - model_manifest.json
+- model_metrics.json
 """
 
 import json
@@ -28,6 +29,7 @@ from datetime import datetime, timezone
 DATASET_ROOT = Path("dataset")
 CHECKPOINT_PATH = Path("deepfake_model.pth")
 MODEL_MANIFEST_PATH = Path("model_manifest.json")
+MODEL_METRICS_PATH = Path("model_metrics.json")
 DATASET_VERSION_FILE = DATASET_ROOT / "version.txt"
 IMAGE_SIZE = 224
 CLASS_NAMES = ["fake", "real"]
@@ -108,7 +110,12 @@ def build_dataloaders():
 
     train_dataset = datasets.ImageFolder(DATASET_ROOT / "train", transform=train_transform)
     val_dataset = datasets.ImageFolder(DATASET_ROOT / "val", transform=eval_transform)
-    test_dataset = datasets.ImageFolder(DATASET_ROOT / "test", transform=eval_transform)
+    test_dir = DATASET_ROOT / "test"
+    test_dataset = (
+        datasets.ImageFolder(test_dir, transform=eval_transform)
+        if test_dir.is_dir()
+        else None
+    )
 
     print("class_names:", train_dataset.classes)
     if train_dataset.classes != CLASS_NAMES:
@@ -123,12 +130,12 @@ def build_dataloaders():
     return (
         DataLoader(train_dataset, batch_size=16, shuffle=True),
         DataLoader(val_dataset, batch_size=16, shuffle=False),
-        DataLoader(test_dataset, batch_size=16, shuffle=False),
+        DataLoader(test_dataset, batch_size=16, shuffle=False) if test_dataset is not None else None,
         {
             "train_class_counts": class_counts,
             "train_size": len(train_dataset),
             "val_size": len(val_dataset),
-            "test_size": len(test_dataset),
+            "test_size": len(test_dataset) if test_dataset is not None else 0,
         },
     )
 
@@ -213,6 +220,28 @@ def evaluate_model(model, dataloader, device):
     }
 
 
+def _summary_metrics(metrics):
+    precision = (metrics["precision_fake"] + metrics["precision_real"]) / 2.0
+    recall = (metrics["recall_fake"] + metrics["recall_real"]) / 2.0
+    f1_score = 0.0 if precision + recall == 0 else (2 * precision * recall) / (precision + recall)
+    return {
+        "accuracy": round(metrics["accuracy"], 2),
+        "precision": round(precision, 2),
+        "recall": round(recall, 2),
+        "f1_score": round(f1_score, 2),
+    }
+
+
+def _display_model_name(architecture):
+    if architecture == "efficientnet_b0_binary":
+        return "EfficientNet-B0"
+    if architecture == "resnet50_binary":
+        return "ResNet-50"
+    if architecture == "resnet18_binary":
+        return "ResNet-18"
+    return architecture
+
+
 def _collect_logits_and_labels(model, dataloader, device):
     torch, _nn, _F, _DataLoader, _datasets, _models, _transforms = _require_torch()
     logits_list = []
@@ -283,6 +312,8 @@ def train_model(epochs=12, architecture="efficientnet_b0_binary"):
     model_version = _resolve_model_version(architecture)
     training_date = _utc_timestamp()
 
+    best_val_metrics = None
+
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
@@ -306,6 +337,7 @@ def train_model(epochs=12, architecture="efficientnet_b0_binary"):
 
         if val_metrics["accuracy"] >= best_val_acc:
             best_val_acc = val_metrics["accuracy"]
+            best_val_metrics = dict(val_metrics)
             torch.save(model.state_dict(), CHECKPOINT_PATH)
             print(f"Saved best checkpoint at val_acc={best_val_acc} to {CHECKPOINT_PATH}")
 
@@ -344,14 +376,35 @@ def train_model(epochs=12, architecture="efficientnet_b0_binary"):
     MODEL_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"Saved manifest to {MODEL_MANIFEST_PATH}")
 
-    if (DATASET_ROOT / "test").is_dir():
+    export_metrics = dict(best_val_metrics or {})
+    if test_loader is not None:
         test_metrics = evaluate_model(model, test_loader, device)
+        export_metrics = dict(test_metrics)
         print(
             "test_acc={accuracy} test_precision_fake={precision_fake} "
             "test_recall_fake={recall_fake} test_precision_real={precision_real} "
             "test_recall_real={recall_real}".format(**test_metrics)
         )
         print(f"test_per_class_accuracy={test_metrics['per_class_accuracy']}")
+
+    summary_metrics = _summary_metrics(export_metrics or {"accuracy": 0.0, "precision_fake": 0.0, "precision_real": 0.0, "recall_fake": 0.0, "recall_real": 0.0})
+    metrics_payload = {
+        "accuracy": summary_metrics["accuracy"],
+        "precision": summary_metrics["precision"],
+        "recall": summary_metrics["recall"],
+        "f1_score": summary_metrics["f1_score"],
+        "classes": CLASS_NAMES,
+        "model": _display_model_name(architecture),
+        "architecture": architecture,
+        "dataset_version": dataset_version,
+        "training_date": training_date,
+        "checkpoint_path": str(CHECKPOINT_PATH),
+        "calibration_method": calibration_method,
+        "temperature": temperature,
+        "evaluation_split": "test" if test_loader is not None else "val",
+    }
+    MODEL_METRICS_PATH.write_text(json.dumps(metrics_payload, indent=2), encoding="utf-8")
+    print(f"Saved metrics to {MODEL_METRICS_PATH}")
 
 
 if __name__ == "__main__":

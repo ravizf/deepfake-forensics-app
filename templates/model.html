@@ -9,21 +9,23 @@
 
 <section class="panel">
   <ul class="clean-list">
+    <li>Analysis Engine: Active</li>
     <li>Detection Mode: AI-Assisted Prototype</li>
     <li>Evaluation Status: {{ evaluation_status_label }}</li>
-    <li>Accuracy: {{ benchmark_summary.accuracy }}</li>
-    <li>Precision: {{ benchmark_summary.precision }}</li>
-    <li>Recall: {{ benchmark_summary.recall }}</li>
-    <li>F1 Score: {{ benchmark_summary.f1_score }}</li>
+    <li>Accuracy: {{ training_metrics.accuracy }}</li>
+    <li>Precision: {{ training_metrics.precision }}</li>
+    <li>Recall: {{ training_metrics.recall }}</li>
+    <li>F1 Score: {{ training_metrics.f1_score }}</li>
   </ul>
 </section>
 
 <section class="panel">
   <h2>Limitations</h2>
   <ul class="clean-list">
-    <li>May not detect new AI models</li>
-    <li>Performance depends on image quality</li>
-    <li>Not intended as legal evidence</li>
+    <li>Result depends on dataset quality.</li>
+    <li>Low-quality images may reduce accuracy.</li>
+    <li>New AI models may bypass detection.</li>
+    <li>This is not legal proof.</li>
   </ul>
 </section>
 {% endblock %}

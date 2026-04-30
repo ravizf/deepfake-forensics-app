@@ -320,9 +320,9 @@ def decision_summary(analysis):
     confidence = float(analysis.get("confidence") or 0.0)
 
     if prediction == "Real" and risk_level == "low":
-        return "Low risk because visual score strongly favors Real."
+        return "Low risk because visual analysis strongly favors a real image."
     if prediction == "AI Generated" and risk_level == "high":
-        return "High risk because visual score strongly favors AI-generated patterns."
+        return "High risk due to strong indicators of synthetic generation."
     if prediction == "Uncertain":
         return "Review needed because the visual score is not strongly separated."
     if confidence >= 75:

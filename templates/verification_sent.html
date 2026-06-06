@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Email Verification</p>
+    <h1>Verify your email address</h1>
+    <p class="lead">
+      We created the account for <strong>{{ email }}</strong>. Verify this email before
+      signing in to the analyst workspace.
+    </p>
+  </div>
+  <div class="panel status-card">
+    <span class="status-pill">Verification Required</span>
+    <p class="muted">Link expires in {{ token_hours }} hours.</p>
+  </div>
+</section>
+
+<section class="panel">
+  {% if sent %}
+    <h2>Check your inbox</h2>
+    <p class="lead">A verification link was sent to your email address.</p>
+  {% else %}
+    <h2>Verification link generated</h2>
+    <p class="lead">
+      Email delivery is not configured for this deployment yet, so SnapTrace generated
+      a secure verification link for this prototype environment.
+    </p>
+    {% if error_message %}
+      <p class="muted">Delivery note: {{ error_message }}</p>
+    {% endif %}
+  {% endif %}
+
+  {% if verification_url %}
+    <div class="verification-link-box">
+      <p class="muted">Use this one-time verification link:</p>
+      <a class="button-link" href="{{ verification_url }}">Verify Email</a>
+      <p><code>{{ verification_url }}</code></p>
+    </div>
+  {% endif %}
+
+  <div class="hero-actions">
+    <a class="ghost-link" href="{{ url_for('login') }}">Back to Login</a>
+    <a class="ghost-link" href="{{ url_for('resend_verification', email=email) }}">Resend Link</a>
+  </div>
+</section>
+{% endblock %}

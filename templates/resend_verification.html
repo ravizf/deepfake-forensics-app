@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div class="panel auth-copy">
+    <p class="eyebrow">Verification Help</p>
+    <h1>Send a new verification link</h1>
+    <p class="lead">
+      Enter the email address used during registration. If the account still needs
+      verification, SnapTrace will issue a fresh one-time link.
+    </p>
+    <ul class="clean-list">
+      <li>Links expire automatically for safer account setup</li>
+      <li>Already verified accounts can sign in normally</li>
+      <li>Prototype deployments show the link if SMTP is not configured</li>
+    </ul>
+  </div>
+
+  <form class="panel form-card" method="post">
+    <label for="email">Email</label>
+    <input
+      id="email"
+      name="email"
+      type="email"
+      placeholder="name@example.com"
+      value="{{ email }}"
+      required
+    >
+
+    <button type="submit">Send Verification Link</button>
+    <p class="form-meta"><a href="{{ url_for('login') }}">Return to login</a></p>
+  </form>
+</section>
+{% endblock %}

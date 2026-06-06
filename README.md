@@ -13,13 +13,33 @@ The repo now includes:
 - `Procfile`
 - `render.yaml`
 - `requirements.txt` with backend runtime packages
-- public health route: `/api/health`
+- public health route: `/health`
 - public analysis route: `/api/public-analyze`
 
 Deploy the repo to Render as a Python web service. After deploy, your backend should expose:
 
-- `https://your-render-service.onrender.com/api/health`
+- `https://your-render-service.onrender.com/health`
 - `https://your-render-service.onrender.com/api/public-analyze`
+
+#### Email verification
+
+New registered accounts must verify their email address before they can sign in.
+Verification links are token-based and expire automatically.
+
+For real email delivery on Render, add these environment variables:
+
+```text
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-user
+SMTP_PASSWORD=your-smtp-password
+SMTP_SENDER=no-reply@your-domain.com
+SMTP_USE_TLS=true
+SHOW_EMAIL_VERIFICATION_LINK=false
+```
+
+If SMTP is not configured, the prototype still generates the verification link
+on-screen so demos and local testing do not get blocked.
 
 #### Netlify frontend
 

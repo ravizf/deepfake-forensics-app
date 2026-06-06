@@ -2,7 +2,11 @@ import os
 import hashlib
 import mimetypes
 import json
+import secrets
+import smtplib
 from functools import wraps
+from datetime import datetime, timedelta
+from email.message import EmailMessage
 from io import BytesIO
 from pathlib import Path
 
@@ -28,6 +32,7 @@ from flask import (
 from flask_cors import CORS
 from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.datastructures import FileStorage
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -43,9 +48,12 @@ from database import (
     get_dashboard_summary,
     get_user_by_email,
     get_user_by_id,
+    get_user_by_verification_token_hash,
     init_db,
     list_user_history,
     log_audit_event,
+    mark_user_email_verified,
+    set_user_email_verification_token,
     set_upload_status,
     verify_user_credentials,
 )
@@ -67,6 +75,7 @@ from report_generator import generate_downloadable_report
 
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 CORS(app)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "snaptrace-dev-key")
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
@@ -74,6 +83,29 @@ app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "uploads")
 app.config["HEATMAP_FOLDER"] = os.path.join(app.root_path, "artifacts", "heatmaps")
 app.config["REPORT_FOLDER"] = os.path.join(app.root_path, "artifacts", "reports")
 app.config["PUBLIC_API_ENABLED"] = os.getenv("PUBLIC_API_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+app.config["EMAIL_VERIFICATION_TOKEN_TTL_HOURS"] = int(
+    os.getenv("EMAIL_VERIFICATION_TOKEN_TTL_HOURS", "48")
+)
+app.config["SHOW_EMAIL_VERIFICATION_LINK"] = os.getenv(
+    "SHOW_EMAIL_VERIFICATION_LINK", "true"
+).lower() in {"1", "true", "yes", "on"}
+app.config["SMTP_HOST"] = os.getenv("SMTP_HOST")
+app.config["SMTP_PORT"] = int(os.getenv("SMTP_PORT", "587"))
+app.config["SMTP_USERNAME"] = os.getenv("SMTP_USERNAME")
+app.config["SMTP_PASSWORD"] = os.getenv("SMTP_PASSWORD")
+app.config["SMTP_SENDER"] = os.getenv("SMTP_SENDER") or os.getenv("SMTP_USERNAME")
+app.config["SMTP_USE_TLS"] = os.getenv("SMTP_USE_TLS", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+app.config["SMTP_USE_SSL"] = os.getenv("SMTP_USE_SSL", "false").lower() in {
     "1",
     "true",
     "yes",
@@ -149,6 +181,108 @@ def current_user():
     if not user_id:
         return None
     return get_user_by_id(user_id)
+
+
+def verification_token_hash(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def smtp_is_configured():
+    return bool(app.config["SMTP_HOST"] and app.config["SMTP_SENDER"])
+
+
+def send_plain_email(to_email, subject, body):
+    if not smtp_is_configured():
+        return False, "SMTP email is not configured for this deployment."
+
+    message = EmailMessage()
+    message["From"] = app.config["SMTP_SENDER"]
+    message["To"] = to_email
+    message["Subject"] = subject
+    message.set_content(body)
+
+    try:
+        if app.config["SMTP_USE_SSL"]:
+            server = smtplib.SMTP_SSL(
+                app.config["SMTP_HOST"],
+                app.config["SMTP_PORT"],
+                timeout=15,
+            )
+        else:
+            server = smtplib.SMTP(
+                app.config["SMTP_HOST"],
+                app.config["SMTP_PORT"],
+                timeout=15,
+            )
+        with server:
+            if app.config["SMTP_USE_TLS"] and not app.config["SMTP_USE_SSL"]:
+                server.starttls()
+            if app.config["SMTP_USERNAME"] and app.config["SMTP_PASSWORD"]:
+                server.login(app.config["SMTP_USERNAME"], app.config["SMTP_PASSWORD"])
+            server.send_message(message)
+        return True, None
+    except Exception as exc:
+        app.logger.exception("Verification email failed")
+        return False, str(exc)
+
+
+def send_email_verification(user):
+    token = secrets.token_urlsafe(32)
+    set_user_email_verification_token(user["id"], verification_token_hash(token))
+    verification_url = url_for("verify_email", token=token, _external=True)
+    sent, error = send_plain_email(
+        user["email"],
+        "Verify your SnapTrace account",
+        "\n".join(
+            [
+                f"Hi {user['full_name']},",
+                "",
+                "Verify your SnapTrace Forensics account using this link:",
+                verification_url,
+                "",
+                (
+                    "This verification link expires in "
+                    f"{app.config['EMAIL_VERIFICATION_TOKEN_TTL_HOURS']} hours."
+                ),
+                "",
+                "If you did not create this account, you can ignore this email.",
+            ]
+        ),
+    )
+    return {
+        "sent": sent,
+        "error": error,
+        "verification_url": verification_url
+        if app.config["SHOW_EMAIL_VERIFICATION_LINK"] or not sent
+        else None,
+    }
+
+
+def verification_token_is_expired(user):
+    sent_at = user.get("email_verification_sent_at")
+    if not sent_at:
+        return True
+    try:
+        sent_time = datetime.fromisoformat(sent_at)
+    except ValueError:
+        return True
+    expires_at = sent_time + timedelta(
+        hours=app.config["EMAIL_VERIFICATION_TOKEN_TTL_HOURS"]
+    )
+    return datetime.utcnow() > expires_at
+
+
+def render_verification_sent(user, delivery):
+    return render_template(
+        "verification_sent.html",
+        title="Verify Email",
+        email=user["email"],
+        sent=delivery["sent"],
+        verification_url=delivery.get("verification_url"),
+        error_message=delivery.get("error"),
+        token_hours=app.config["EMAIL_VERIFICATION_TOKEN_TTL_HOURS"],
+        smtp_configured=smtp_is_configured(),
+    )
 
 
 def detector_status_label(detector, benchmark_report=None):
@@ -958,16 +1092,28 @@ def register():
                 email=email,
                 password_hash=generate_password_hash(password),
             )
+            user = get_user_by_id(user_id)
+            delivery = send_email_verification(user)
             log_audit_event(
                 user_id=user_id,
                 action="USER_REGISTERED",
                 target_type="user",
                 target_id=user_id,
-                details="Created account",
+                details="Created account; email verification required",
                 ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
             )
-            flash("Account created. Please sign in.", "success")
-            return redirect(url_for("login"))
+            log_audit_event(
+                user_id=user_id,
+                action="EMAIL_VERIFICATION_SENT",
+                target_type="user",
+                target_id=user_id,
+                details="Sent email verification link"
+                if delivery["sent"]
+                else f"Email verification link generated locally: {delivery.get('error')}",
+                ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
+            )
+            flash("Account created. Verify your email before signing in.", "success")
+            return render_verification_sent(user, delivery)
 
     return render_template(
         "auth.html",
@@ -988,6 +1134,18 @@ def login():
 
         if not user:
             flash("Invalid email or password.", "danger")
+        elif user.get("requires_email_verification"):
+            delivery = send_email_verification(user)
+            log_audit_event(
+                user_id=user["id"],
+                action="EMAIL_VERIFICATION_REQUIRED",
+                target_type="user",
+                target_id=user["id"],
+                details="Login blocked until email verification is completed",
+                ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
+            )
+            flash("Please verify your email before signing in.", "warning")
+            return render_verification_sent(user, delivery)
         else:
             session["user_id"] = user["id"]
             log_audit_event(
@@ -1008,6 +1166,71 @@ def login():
         page_heading="Sign in to SnapTrace",
         page_blurb="Continue your forensic workflow, review flagged cases, and download evidence reports.",
         submit_label="Sign In",
+    )
+
+
+@app.route("/verify-email/<token>")
+def verify_email(token):
+    user = get_user_by_verification_token_hash(verification_token_hash(token))
+    if not user:
+        flash("Verification link is invalid or has already been used.", "danger")
+        return redirect(url_for("resend_verification"))
+
+    if user.get("email_verified_at"):
+        flash("Your email is already verified. Please sign in.", "success")
+        return redirect(url_for("login"))
+
+    if verification_token_is_expired(user):
+        flash("Verification link expired. Request a fresh link below.", "warning")
+        return redirect(url_for("resend_verification", email=user["email"]))
+
+    verified_user = mark_user_email_verified(user["id"])
+    log_audit_event(
+        user_id=user["id"],
+        action="EMAIL_VERIFIED",
+        target_type="user",
+        target_id=user["id"],
+        details="User verified email address",
+        ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
+    )
+    flash(f"Email verified for {verified_user['email']}. You can sign in now.", "success")
+    return redirect(url_for("login"))
+
+
+@app.route("/resend-verification", methods=["GET", "POST"])
+def resend_verification():
+    prefill_email = request.args.get("email", "").strip().lower()
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        user = get_user_by_email(email)
+        if user and user.get("email_verified_at"):
+            flash("That email is already verified. Please sign in.", "success")
+            return redirect(url_for("login"))
+        if user:
+            delivery = send_email_verification(user)
+            log_audit_event(
+                user_id=user["id"],
+                action="EMAIL_VERIFICATION_RESENT",
+                target_type="user",
+                target_id=user["id"],
+                details="Resent email verification link"
+                if delivery["sent"]
+                else f"Email verification link regenerated locally: {delivery.get('error')}",
+                ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
+            )
+            flash("Verification instructions are ready.", "success")
+            return render_verification_sent(user, delivery)
+
+        flash(
+            "If that email belongs to an unverified account, a verification link will be sent.",
+            "success",
+        )
+        return redirect(url_for("login"))
+
+    return render_template(
+        "resend_verification.html",
+        title="Resend Verification",
+        email=prefill_email,
     )
 
 

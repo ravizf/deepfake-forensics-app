@@ -31,7 +31,10 @@ def init_db():
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'analyst',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            last_login TEXT
+            last_login TEXT,
+            email_verified_at TEXT,
+            email_verification_token_hash TEXT,
+            email_verification_sent_at TEXT
         );
 
         CREATE TABLE IF NOT EXISTS media_uploads (
@@ -103,9 +106,35 @@ def init_db():
         );
         """
     )
+    _ensure_user_columns(connection)
     _ensure_analysis_columns(connection)
     connection.commit()
     connection.close()
+
+
+def _ensure_user_columns(connection):
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(users)").fetchall()
+    }
+    added_email_verified_at = False
+    if "email_verified_at" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN email_verified_at TEXT")
+        added_email_verified_at = True
+    if "email_verification_token_hash" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN email_verification_token_hash TEXT")
+    if "email_verification_sent_at" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN email_verification_sent_at TEXT")
+
+    # Keep pre-existing accounts usable after this migration. New accounts are
+    # created unverified unless create_user(..., email_verified=True) is used.
+    if added_email_verified_at:
+        connection.execute(
+            """
+            UPDATE users
+            SET email_verified_at = COALESCE(email_verified_at, created_at, CURRENT_TIMESTAMP)
+            WHERE email_verified_at IS NULL
+            """
+        )
 
 
 def _ensure_analysis_columns(connection):
@@ -178,16 +207,17 @@ def _parse_analysis_payload(row):
     return payload
 
 
-def create_user(full_name, email, password_hash):
+def create_user(full_name, email, password_hash, email_verified=False):
     connection = get_connection()
     user_count = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     role = "admin" if user_count == 0 else "analyst"
+    verified_at = datetime.utcnow().isoformat(timespec="seconds") if email_verified else None
     cursor = connection.execute(
         """
-        INSERT INTO users (full_name, email, password_hash, role)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (full_name, email, password_hash, role, email_verified_at)
+        VALUES (?, ?, ?, ?, ?)
         """,
-        (full_name, email, password_hash, role),
+        (full_name, email, password_hash, role, verified_at),
     )
     connection.commit()
     user_id = cursor.lastrowid
@@ -208,19 +238,35 @@ def ensure_public_demo_user():
         "SELECT * FROM users WHERE email = ?", (PUBLIC_DEMO_EMAIL,)
     ).fetchone()
     if existing:
+        if not existing["email_verified_at"]:
+            connection.execute(
+                """
+                UPDATE users
+                SET email_verified_at = COALESCE(email_verified_at, created_at, CURRENT_TIMESTAMP),
+                    email_verification_token_hash = NULL,
+                    email_verification_sent_at = NULL
+                WHERE id = ?
+                """,
+                (existing["id"],),
+            )
+            connection.commit()
+            existing = connection.execute(
+                "SELECT * FROM users WHERE id = ?", (existing["id"],)
+            ).fetchone()
         connection.close()
         return dict(existing)
 
     cursor = connection.execute(
         """
-        INSERT INTO users (full_name, email, password_hash, role)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (full_name, email, password_hash, role, email_verified_at)
+        VALUES (?, ?, ?, ?, ?)
         """,
         (
             PUBLIC_DEMO_NAME,
             PUBLIC_DEMO_EMAIL,
             generate_password_hash(os.urandom(16).hex()),
             "analyst",
+            datetime.utcnow().isoformat(timespec="seconds"),
         ),
     )
     connection.commit()
@@ -237,12 +283,65 @@ def get_user_by_id(user_id):
     return dict(row) if row else None
 
 
+def set_user_email_verification_token(user_id, token_hash):
+    connection = get_connection()
+    sent_at = datetime.utcnow().isoformat(timespec="seconds")
+    connection.execute(
+        """
+        UPDATE users
+        SET email_verification_token_hash = ?,
+            email_verification_sent_at = ?
+        WHERE id = ?
+        """,
+        (token_hash, sent_at, user_id),
+    )
+    connection.commit()
+    row = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    connection.close()
+    return dict(row) if row else None
+
+
+def get_user_by_verification_token_hash(token_hash):
+    connection = get_connection()
+    row = connection.execute(
+        "SELECT * FROM users WHERE email_verification_token_hash = ?",
+        (token_hash,),
+    ).fetchone()
+    connection.close()
+    return dict(row) if row else None
+
+
+def mark_user_email_verified(user_id):
+    connection = get_connection()
+    verified_at = datetime.utcnow().isoformat(timespec="seconds")
+    connection.execute(
+        """
+        UPDATE users
+        SET email_verified_at = ?,
+            email_verification_token_hash = NULL,
+            email_verification_sent_at = NULL
+        WHERE id = ?
+        """,
+        (verified_at, user_id),
+    )
+    connection.commit()
+    row = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    connection.close()
+    return dict(row) if row else None
+
+
 def verify_user_credentials(email, password):
     connection = get_connection()
     row = connection.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
     if not row or not check_password_hash(row["password_hash"], password):
         connection.close()
         return None
+
+    if not row["email_verified_at"]:
+        payload = dict(row)
+        payload["requires_email_verification"] = True
+        connection.close()
+        return payload
 
     last_login = datetime.utcnow().isoformat(timespec="seconds")
     connection.execute(

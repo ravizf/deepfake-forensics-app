@@ -635,15 +635,29 @@ def enrich_analysis(analysis):
     return analysis
 
 
-def enrich_history_case(analysis):
+def enrich_history_case(analysis, public=False):
     if not analysis:
         return None
 
     analysis = dict(analysis)
-    analysis["result_url"] = url_for("result_page", analysis_id=analysis["analysis_id"])
-    analysis["evidence_url"] = url_for("evidence_page", analysis_id=analysis["analysis_id"])
-    analysis["report_url"] = url_for("report_page", analysis_id=analysis["analysis_id"])
-    analysis["report_download_url"] = url_for("download_report", analysis_id=analysis["analysis_id"])
+    if public:
+        analysis["result_url"] = url_for(
+            "public_result_page", analysis_id=analysis["analysis_id"]
+        )
+        analysis["evidence_url"] = url_for(
+            "public_evidence_page", analysis_id=analysis["analysis_id"]
+        )
+        analysis["report_url"] = analysis["result_url"]
+        analysis["report_download_url"] = url_for(
+            "public_download_report", analysis_id=analysis["analysis_id"]
+        )
+    else:
+        analysis["result_url"] = url_for("result_page", analysis_id=analysis["analysis_id"])
+        analysis["evidence_url"] = url_for("evidence_page", analysis_id=analysis["analysis_id"])
+        analysis["report_url"] = url_for("report_page", analysis_id=analysis["analysis_id"])
+        analysis["report_download_url"] = url_for(
+            "download_report", analysis_id=analysis["analysis_id"]
+        )
     analysis["display_prediction"] = (
         str(analysis.get("prediction") or "").replace("AI-Generated", "AI Generated")
     )
@@ -1042,7 +1056,6 @@ def evaluation_page():
 
 
 @app.route("/upload", methods=["GET", "POST"])
-@login_required
 def upload_page():
     if request.method == "POST":
         file = request.files.get("file")
@@ -1050,8 +1063,18 @@ def upload_page():
             flash("Choose an image or video file to analyze.", "danger")
         else:
             try:
-                analysis = run_analysis_workflow(file)
+                is_public = not bool(g.get("current_user"))
+                acting_user = g.get("current_user") or ensure_public_demo_user()
+                analysis = run_analysis_workflow(
+                    file,
+                    acting_user=acting_user,
+                    audit_prefix="Submitted public upload" if is_public else None,
+                )
                 flash("Analysis completed successfully.", "success")
+                if is_public:
+                    return redirect(
+                        url_for("public_result_page", analysis_id=analysis["analysis_id"])
+                    )
                 return redirect(url_for("result_page", analysis_id=analysis["analysis_id"]))
             except ValueError as exc:
                 app.logger.exception("Validation error during upload")
@@ -1103,15 +1126,25 @@ def report_page(analysis_id):
 
 
 @app.route("/history")
-@login_required
 def history_page():
-    include_all = g.current_user["role"] == "admin"
+    is_public = not bool(g.get("current_user"))
+    user = g.get("current_user") or ensure_public_demo_user()
+    include_all = (not is_public) and user["role"] == "admin"
     limit = 50 if include_all else HISTORY_PAGE_LIMIT
-    cases = [
-        enrich_history_case(case)
-        for case in list_user_history(g.current_user["id"], include_all, limit=limit)
-    ]
-    return render_template("history.html", title="Report History", cases=cases, limit=limit)
+    try:
+        history_rows = list_user_history(user["id"], include_all, limit=limit)
+    except Exception as exc:
+        app.logger.exception("History query failed")
+        flash(f"History is temporarily unavailable: {exc}", "warning")
+        history_rows = []
+    cases = [enrich_history_case(case, public=is_public) for case in history_rows]
+    return render_template(
+        "history.html",
+        title="Report History",
+        cases=cases,
+        limit=limit,
+        public_history=is_public,
+    )
 
 
 @app.route("/admin")

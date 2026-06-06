@@ -4,6 +4,9 @@
   <div>
     <p class="eyebrow">Upload Evidence</p>
     <h1>Submit an image or video for prototype forensic analysis and reporting.</h1>
+    {% if not current_user %}
+      <p class="lead">Reviewer mode is enabled. Uploads run as public demo cases without account creation.</p>
+    {% endif %}
   </div>
 </section>
 

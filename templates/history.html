@@ -4,6 +4,9 @@
   <div>
     <p class="eyebrow">History</p>
     <h1>Previously analyzed evidence and generated reports.</h1>
+    {% if public_history %}
+      <p class="lead">Showing public demo analyses. Sign in to see private analyst cases.</p>
+    {% endif %}
   </div>
 </section>
 

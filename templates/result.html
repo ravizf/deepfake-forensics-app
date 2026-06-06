@@ -35,10 +35,10 @@
   </article>
 
   <article class="panel">
-    <h2>Why this result</h2>
+    <h2>Why did the AI make this decision?</h2>
     <p><strong>Decision:</strong> {{ analysis.decision_summary }}</p>
     <p><strong>Confidence note:</strong> {{ analysis.confidence_warning }}</p>
-    <ul class="clean-list">
+    <ul class="evidence-list">
       {% for item in analysis.analysis_reasons or [] %}
         <li>{{ item }}</li>
       {% endfor %}
@@ -60,8 +60,23 @@
 
 <section class="panel">
   <h2>Visual Evidence</h2>
+  <div class="grid three-up evidence-summary">
+    <article>
+      <span>Heatmap</span>
+      <strong>{% if analysis.heatmap_url %}Available{% else %}Not Available{% endif %}</strong>
+    </article>
+    <article>
+      <span>Face Region Analyzed</span>
+      <strong>{{ analysis.face_detected }}</strong>
+    </article>
+    <article>
+      <span>Suspicious Areas</span>
+      <strong>Highlighted below</strong>
+    </article>
+  </div>
   {% if analysis.heatmap_url %}
     <img class="evidence-image" src="{{ analysis.heatmap_url }}" alt="Heatmap evidence preview">
+    <p class="muted">Warmer regions show where the prototype found stronger visual inconsistency signals such as texture, compression, edge, or lighting differences.</p>
   {% else %}
     <p class="muted">Visual evidence is not available for this analysis.</p>
   {% endif %}

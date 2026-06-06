@@ -175,6 +175,7 @@ SYNC_REPORT_GENERATION = os.getenv("SYNC_REPORT_GENERATION", "false").lower() in
     "on",
 }
 HISTORY_PAGE_LIMIT = int(os.getenv("HISTORY_PAGE_LIMIT", "25"))
+MAX_BATCH_UPLOADS = int(os.getenv("MAX_BATCH_UPLOADS", "10"))
 
 
 def current_user():
@@ -480,6 +481,25 @@ def training_metrics_summary(metrics_report, benchmark_report=None, detector=Non
     return fallback
 
 
+def percentage(part, total):
+    if not total:
+        return 0
+    return round((float(part) / float(total)) * 100, 1)
+
+
+def dashboard_visual_summary(summary, training_metrics):
+    total = summary.get("total_cases") or 0
+    return {
+        "fake_percent": percentage(summary.get("fake_cases") or 0, total),
+        "real_percent": percentage(summary.get("real_cases") or 0, total),
+        "review_percent": percentage(summary.get("review_cases") or 0, total),
+        "accuracy": training_metrics.get("accuracy", "Pending"),
+        "precision": training_metrics.get("precision", "Pending"),
+        "recall": training_metrics.get("recall", "Pending"),
+        "f1_score": training_metrics.get("f1_score", "Pending"),
+    }
+
+
 def image_quality_warning(analysis):
     if analysis.get("media_type") != "image":
         return "Video analysis uses the fallback scoring path in this prototype."
@@ -629,6 +649,9 @@ def enrich_public_demo_analysis(analysis):
     analysis = enrich_analysis(analysis)
     if not analysis:
         return None
+    analysis["result_url"] = url_for(
+        "public_result_page", analysis_id=analysis["analysis_id"]
+    )
     if analysis.get("heatmap_path"):
         analysis["heatmap_url"] = url_for(
             "public_artifact_file",
@@ -1253,7 +1276,16 @@ def logout():
 def dashboard():
     summary = get_dashboard_summary(g.current_user["id"])
     summary["recent_cases"] = [enrich_analysis(case) for case in summary["recent_cases"]]
-    return render_template("dashboard.html", title="Dashboard", summary=summary)
+    detector = manifest_descriptor()
+    metrics_report = load_model_metrics()
+    training_metrics = training_metrics_summary(metrics_report, None, detector)
+    return render_template(
+        "dashboard.html",
+        title="Dashboard",
+        summary=summary,
+        training_metrics=training_metrics,
+        dashboard_visual=dashboard_visual_summary(summary, training_metrics),
+    )
 
 
 @app.route("/evaluation", methods=["GET", "POST"])
@@ -1287,23 +1319,70 @@ def evaluation_page():
 def upload_page():
     if request.method == "POST":
         try:
-            file = request.files.get("file")
-            if not file or not file.filename:
+            files = [file for file in request.files.getlist("file") if file and file.filename]
+            if not files:
                 flash("Choose an image or video file to analyze.", "danger")
             else:
+                if len(files) > MAX_BATCH_UPLOADS:
+                    raise ValueError(
+                        f"Upload up to {MAX_BATCH_UPLOADS} files at once for stable Render processing."
+                    )
+
                 is_public = not bool(g.get("current_user"))
                 acting_user = g.get("current_user") or ensure_public_demo_user()
-                analysis = run_analysis_workflow(
-                    file,
-                    acting_user=acting_user,
-                    audit_prefix="Submitted public upload" if is_public else None,
-                )
-                flash("Analysis completed successfully.", "success")
-                if is_public:
-                    return redirect(
-                        url_for("public_result_page", analysis_id=analysis["analysis_id"])
+                batch_results = []
+                for file_storage in files:
+                    try:
+                        analysis = run_analysis_workflow(
+                            file_storage,
+                            acting_user=acting_user,
+                            audit_prefix="Submitted public upload" if is_public else None,
+                        )
+                        view_analysis = (
+                            enrich_public_demo_analysis(analysis)
+                            if is_public
+                            else enrich_analysis(analysis)
+                        )
+                        batch_results.append(
+                            {
+                                "ok": True,
+                                "filename": file_storage.filename,
+                                "analysis": view_analysis,
+                            }
+                        )
+                    except Exception as item_exc:
+                        app.logger.exception("Batch upload item failed")
+                        batch_results.append(
+                            {
+                                "ok": False,
+                                "filename": file_storage.filename,
+                                "error": str(item_exc),
+                            }
+                        )
+
+                successful = [item for item in batch_results if item["ok"]]
+                failed = [item for item in batch_results if not item["ok"]]
+                if len(files) == 1 and successful:
+                    flash("Analysis completed successfully.", "success")
+                    analysis = successful[0]["analysis"]
+                    return redirect(analysis["result_url"])
+
+                if successful:
+                    flash(
+                        f"Analyzed {len(successful)} file(s)"
+                        + (f"; {len(failed)} failed." if failed else "."),
+                        "success" if not failed else "warning",
                     )
-                return redirect(url_for("result_page", analysis_id=analysis["analysis_id"]))
+                    return render_template(
+                        "upload_batch.html",
+                        title="Batch Results",
+                        batch_results=batch_results,
+                        public_demo=is_public,
+                    )
+
+                raise ValueError(
+                    failed[0]["error"] if failed else "No files could be analyzed."
+                )
         except RequestEntityTooLarge:
             message = f"Upload is too large. Please use a file under {max_upload_size_mb()} MB."
             app.logger.warning("Upload rejected because it exceeded MAX_CONTENT_LENGTH")
@@ -1313,6 +1392,7 @@ def upload_page():
                 title="Upload Evidence",
                 error_message=message,
                 max_upload_mb=max_upload_size_mb(),
+                max_batch_uploads=MAX_BATCH_UPLOADS,
             ), 413
         except ValueError as exc:
             app.logger.exception("Validation error during upload")
@@ -1322,6 +1402,7 @@ def upload_page():
                 title="Upload Evidence",
                 error_message=str(exc),
                 max_upload_mb=max_upload_size_mb(),
+                max_batch_uploads=MAX_BATCH_UPLOADS,
             ), 400
         except Exception as exc:
             app.logger.exception("Unhandled error during analysis")
@@ -1336,6 +1417,7 @@ def upload_page():
                 error_message=message,
                 technical_error=str(exc),
                 max_upload_mb=max_upload_size_mb(),
+                max_batch_uploads=MAX_BATCH_UPLOADS,
             ), 500
 
     return render_template(
@@ -1343,6 +1425,7 @@ def upload_page():
         title="Upload Evidence",
         error_message=None,
         max_upload_mb=max_upload_size_mb(),
+        max_batch_uploads=MAX_BATCH_UPLOADS,
     )
 
 
@@ -1689,6 +1772,7 @@ def file_too_large(_error):
         title="Upload Evidence",
         error_message=message,
         max_upload_mb=max_upload_size_mb(),
+        max_batch_uploads=MAX_BATCH_UPLOADS,
     ), 413
 
 

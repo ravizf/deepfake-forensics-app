@@ -58,4 +58,42 @@
     </ul>
   </article>
 </section>
+
+<section class="grid three-up">
+  <article class="panel">
+    <h2>Features</h2>
+    <ul class="clean-list">
+      <li>Single or batch image upload</li>
+      <li>Confidence and risk scoring</li>
+      <li>Heatmap-style visual evidence</li>
+      <li>Metadata inspection and PDF reports</li>
+    </ul>
+  </article>
+  <article class="panel">
+    <h2>AI Model</h2>
+    <ul class="clean-list">
+      <li>Architecture: {{ training_metrics.model_name }}</li>
+      <li>Image processing: OpenCV and Pillow</li>
+      <li>Backend: Flask with SQLite audit history</li>
+      <li>Deployment: Render web service</li>
+    </ul>
+  </article>
+  <article class="panel">
+    <h2>FAQ</h2>
+    <ul class="clean-list">
+      <li>Can it be legal proof? No, it is research assistance only.</li>
+      <li>Can metadata be missing on real photos? Yes.</li>
+      <li>Can new AI models fool it? Yes, retraining is required.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Example Results</h2>
+  <p class="lead">Try the demo set to compare real selfie, AI face, compressed, cropped, low-quality, and low-light examples.</p>
+  <div class="hero-actions">
+    <a class="button-link" href="{{ url_for('demo_page') }}">Try Demo Samples</a>
+    <a class="ghost-link" href="{{ url_for('model_info_page') }}">View Model Metrics</a>
+  </div>
+</section>
 {% endblock %}

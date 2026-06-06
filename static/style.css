@@ -353,6 +353,124 @@ button {
   color: var(--text);
 }
 
+.loading-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+}
+
+.loading-panel[hidden] {
+  display: none;
+}
+
+.spinner {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 3px solid rgba(95, 214, 255, 0.22);
+  border-top-color: var(--accent-2);
+  animation: spin 0.8s linear infinite;
+}
+
+.bar-metric {
+  display: grid;
+  grid-template-columns: 7rem 1fr 3.5rem;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.85rem 0;
+}
+
+.bar-track {
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--danger), var(--accent));
+}
+
+.bar-track.bar-success span {
+  background: linear-gradient(90deg, var(--success), var(--accent-2));
+}
+
+.bar-track.bar-warning span {
+  background: linear-gradient(90deg, var(--warning), var(--accent));
+}
+
+.metric-stack {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.8rem 0;
+}
+
+.metric-stack span,
+.activity-list li,
+.evidence-summary article {
+  padding: 0.75rem 0.9rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.activity-list li {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.activity-list small {
+  color: var(--muted);
+}
+
+.evidence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.evidence-list li {
+  position: relative;
+  padding: 0.75rem 0.9rem 0.75rem 2rem;
+  border-radius: 1rem;
+  background: rgba(92, 225, 179, 0.08);
+  border: 1px solid rgba(92, 225, 179, 0.18);
+}
+
+.evidence-list li::before {
+  content: "+";
+  position: absolute;
+  left: 0.85rem;
+  color: var(--success);
+  font-weight: 800;
+}
+
+.evidence-summary {
+  margin: 0.8rem 0 0.2rem;
+}
+
+.evidence-summary article {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.evidence-summary span {
+  color: var(--muted);
+}
+
 label {
   font-weight: 700;
 }
@@ -465,6 +583,12 @@ td {
   text-align: center;
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 980px) {
   .hero,
   .section-header,
@@ -479,5 +603,9 @@ td {
   .site-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .bar-metric {
+    grid-template-columns: 1fr;
   }
 }

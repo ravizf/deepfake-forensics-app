@@ -9,17 +9,52 @@
 </section>
 
 <section class="grid four-up">
-  <article class="metric-card"><span>Total Cases</span><strong>{{ summary.total_cases }}</strong></article>
-  <article class="metric-card"><span>Flagged Fake</span><strong>{{ summary.fake_cases }}</strong></article>
-  <article class="metric-card"><span>Reports Ready</span><strong>{{ summary.reports_ready }}</strong></article>
-  <article class="metric-card"><span>Audit Events</span><strong>{{ summary.audit_events }}</strong></article>
+  <article class="metric-card"><span>Total Images Analyzed</span><strong>{{ summary.total_cases }}</strong></article>
+  <article class="metric-card"><span>Deepfakes Detected</span><strong>{{ summary.fake_cases }}</strong></article>
+  <article class="metric-card"><span>Real Images Detected</span><strong>{{ summary.real_cases }}</strong></article>
+  <article class="metric-card"><span>Average Confidence</span><strong>{{ summary.avg_confidence }}%</strong></article>
 </section>
 
-<section class="panel">
-  <h2>Analysis Status</h2>
-  <p><strong>Analysis Engine:</strong> {{ analysis_engine_label }}</p>
-  <p><strong>Detection Mode:</strong> {{ detection_mode_label }}</p>
-  <p class="muted"><strong>Evaluation Status:</strong> {{ evaluation_status_label }}</p>
+<section class="grid three-up">
+  <article class="panel">
+    <h2>Analysis Status</h2>
+    <ul class="clean-list">
+      <li>Analysis Engine: {{ analysis_engine_label }}</li>
+      <li>Detection Mode: {{ detection_mode_label }}</li>
+      <li>Evaluation Status: {{ evaluation_status_label }}</li>
+      <li>Reports Ready: {{ summary.reports_ready }}</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Detection Mix</h2>
+    <div class="bar-metric">
+      <span>AI Generated</span>
+      <div class="bar-track"><span style="width: {{ dashboard_visual.fake_percent }}%"></span></div>
+      <strong>{{ dashboard_visual.fake_percent }}%</strong>
+    </div>
+    <div class="bar-metric">
+      <span>Real</span>
+      <div class="bar-track bar-success"><span style="width: {{ dashboard_visual.real_percent }}%"></span></div>
+      <strong>{{ dashboard_visual.real_percent }}%</strong>
+    </div>
+    <div class="bar-metric">
+      <span>Review</span>
+      <div class="bar-track bar-warning"><span style="width: {{ dashboard_visual.review_percent }}%"></span></div>
+      <strong>{{ dashboard_visual.review_percent }}%</strong>
+    </div>
+  </article>
+
+  <article class="panel">
+    <h2>Detection Accuracy Graph</h2>
+    <div class="metric-stack">
+      <span>Accuracy: {{ dashboard_visual.accuracy }}</span>
+      <span>Precision: {{ dashboard_visual.precision }}</span>
+      <span>Recall: {{ dashboard_visual.recall }}</span>
+      <span>F1 Score: {{ dashboard_visual.f1_score }}</span>
+    </div>
+    <p class="muted">Metrics come from the stored benchmark report for the current model.</p>
+  </article>
 </section>
 
 <section class="grid two-up">
@@ -54,14 +89,30 @@
   </article>
 
   <article class="panel">
-    <h2>Workflow Coverage</h2>
-    <ul class="clean-list">
-      <li>Evidence intake with file metadata capture</li>
-      <li>Prototype real-vs-AI prediction and confidence scoring</li>
-      <li>Visual explanation heatmap and evidence notes</li>
-      <li>Generated reports plus investigation history</li>
-      <li>Audit logging for forensic traceability</li>
-    </ul>
+    <h2>Recent Activity</h2>
+    {% if summary.recent_activity %}
+      <ul class="activity-list">
+        {% for event in summary.recent_activity %}
+          <li>
+            <strong>{{ event.action.replace("_", " ").title() }}</strong>
+            <span>{{ event.details }}</span>
+            <small>{{ event.created_at }}</small>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No recent activity yet.</p>
+    {% endif %}
   </article>
+</section>
+
+<section class="panel">
+  <h2>Portfolio-Ready Workflow</h2>
+  <ul class="clean-list">
+    <li>Evidence intake with file metadata capture and SHA-256 chain-of-custody record.</li>
+    <li>Single-image or batch upload with AI-assisted prediction, confidence, and risk score.</li>
+    <li>Visual explanation heatmap, face-region status, and suspicious-area notes.</li>
+    <li>Downloadable PDF reports plus analyst history and audit events.</li>
+  </ul>
 </section>
 {% endblock %}

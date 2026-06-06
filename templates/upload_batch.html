@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Batch Analysis</p>
+    <h1>Batch upload results</h1>
+    <p class="lead">Each image was analyzed separately so you can review, compare, and download reports per file.</p>
+  </div>
+  <div class="hero-actions">
+    <a class="button-link" href="{{ url_for('upload_page') }}">Analyze More</a>
+    <a class="ghost-link" href="{{ url_for('history_page') }}">View History</a>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Status</th>
+          <th>Prediction</th>
+          <th>Confidence</th>
+          <th>Risk</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in batch_results %}
+          <tr>
+            <td>{{ item.filename }}</td>
+            {% if item.ok %}
+              <td>Analyzed</td>
+              <td>{{ item.analysis.display_prediction or item.analysis.prediction }}</td>
+              <td>{{ item.analysis.confidence }}%</td>
+              <td>{{ item.analysis.risk_score or item.analysis.fraud_score }} / 100</td>
+              <td>
+                <a href="{{ item.analysis.result_url }}">Result</a>
+                {% if item.analysis.evidence_url %} | <a href="{{ item.analysis.evidence_url }}">Heatmap</a>{% endif %}
+                {% if item.analysis.report_download_url %} | <a href="{{ item.analysis.report_download_url }}">Report</a>{% endif %}
+              </td>
+            {% else %}
+              <td>Failed</td>
+              <td colspan="3">{{ item.error }}</td>
+              <td>Try a smaller JPG/PNG</td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

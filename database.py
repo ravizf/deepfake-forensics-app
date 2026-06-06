@@ -690,8 +690,11 @@ def get_dashboard_summary(user_id):
         """
         SELECT
             COUNT(*) AS total_cases,
-            SUM(CASE WHEN a.prediction IN ('AI-Generated', 'Fake', 'Likely AI Generated') THEN 1 ELSE 0 END) AS fake_cases,
-            SUM(CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) AS reports_ready
+            SUM(CASE WHEN a.prediction IN ('AI-Generated', 'AI Generated', 'AI Generated / Fake', 'Fake', 'Likely AI Generated') THEN 1 ELSE 0 END) AS fake_cases,
+            SUM(CASE WHEN a.prediction IN ('Real', 'Likely Real') THEN 1 ELSE 0 END) AS real_cases,
+            SUM(CASE WHEN a.prediction IN ('Uncertain', 'Review Required') THEN 1 ELSE 0 END) AS review_cases,
+            SUM(CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) AS reports_ready,
+            ROUND(AVG(a.confidence), 2) AS avg_confidence
         FROM analyses a
         JOIN media_uploads m ON m.id = a.upload_id
         LEFT JOIN reports r ON r.analysis_id = a.id
@@ -702,6 +705,16 @@ def get_dashboard_summary(user_id):
     audit_count = connection.execute(
         "SELECT COUNT(*) FROM audit_logs WHERE user_id = ?", (user_id,)
     ).fetchone()[0]
+    recent_activity = connection.execute(
+        """
+        SELECT action, target_type, details, created_at
+        FROM audit_logs
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 6
+        """,
+        (user_id,),
+    ).fetchall()
     recent_rows = connection.execute(
         """
         SELECT
@@ -764,9 +777,13 @@ def get_dashboard_summary(user_id):
     return {
         "total_cases": totals["total_cases"] or 0,
         "fake_cases": totals["fake_cases"] or 0,
+        "real_cases": totals["real_cases"] or 0,
+        "review_cases": totals["review_cases"] or 0,
         "reports_ready": totals["reports_ready"] or 0,
+        "avg_confidence": totals["avg_confidence"] or 0,
         "audit_events": audit_count or 0,
         "recent_cases": [_parse_analysis_payload(row) for row in recent_rows],
+        "recent_activity": [dict(row) for row in recent_activity],
     }
 
 

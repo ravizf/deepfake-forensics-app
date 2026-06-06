@@ -2,14 +2,29 @@
 {% block content %}
 <section class="panel error-card">
   <p class="eyebrow">Error {{ code }}</p>
-  <h1>{% if code == 403 %}Access denied{% else %}Page not found{% endif %}</h1>
-  <p class="lead">
+  <h1>
     {% if code == 403 %}
+      Access denied
+    {% elif code == 500 %}
+      Server error
+    {% else %}
+      Page not found
+    {% endif %}
+  </h1>
+  <p class="lead">
+    {% if message %}
+      {{ message }}
+    {% elif code == 403 %}
       This part of the forensic workspace is restricted for your current role.
     {% else %}
       The requested case or page could not be located.
     {% endif %}
   </p>
-  <a class="button-link" href="{{ url_for('home') }}">Return Home</a>
+  <div class="hero-actions">
+    <a class="button-link" href="{{ url_for('home') }}">Return Home</a>
+    {% if code == 500 %}
+      <a class="ghost-link" href="{{ url_for('upload_page') }}">Try Upload Again</a>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

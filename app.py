@@ -32,6 +32,7 @@ from flask import (
 from flask_cors import CORS
 from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
@@ -894,6 +895,10 @@ def preprocess_image(file_path):
         raise ValueError("Unsupported or corrupted image file.") from exc
 
 
+def max_upload_size_mb():
+    return round(app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024), 1)
+
+
 def ensure_report_record(analysis):
     if analysis.get("report_path") and os.path.exists(analysis["report_path"]):
         return analysis
@@ -1281,11 +1286,11 @@ def evaluation_page():
 @app.route("/upload", methods=["GET", "POST"])
 def upload_page():
     if request.method == "POST":
-        file = request.files.get("file")
-        if not file or not file.filename:
-            flash("Choose an image or video file to analyze.", "danger")
-        else:
-            try:
+        try:
+            file = request.files.get("file")
+            if not file or not file.filename:
+                flash("Choose an image or video file to analyze.", "danger")
+            else:
                 is_public = not bool(g.get("current_user"))
                 acting_user = g.get("current_user") or ensure_public_demo_user()
                 analysis = run_analysis_workflow(
@@ -1299,19 +1304,46 @@ def upload_page():
                         url_for("public_result_page", analysis_id=analysis["analysis_id"])
                     )
                 return redirect(url_for("result_page", analysis_id=analysis["analysis_id"]))
-            except ValueError as exc:
-                app.logger.exception("Validation error during upload")
-                flash(str(exc), "danger")
-            except Exception as exc:
-                app.logger.exception("Unhandled error during analysis")
-                flash(f"Analysis failed: {exc}", "danger")
-                return render_template(
-                    "upload.html",
-                    title="Upload Evidence",
-                    error_message=str(exc),
-                ), 500
+        except RequestEntityTooLarge:
+            message = f"Upload is too large. Please use a file under {max_upload_size_mb()} MB."
+            app.logger.warning("Upload rejected because it exceeded MAX_CONTENT_LENGTH")
+            flash(message, "danger")
+            return render_template(
+                "upload.html",
+                title="Upload Evidence",
+                error_message=message,
+                max_upload_mb=max_upload_size_mb(),
+            ), 413
+        except ValueError as exc:
+            app.logger.exception("Validation error during upload")
+            flash(str(exc), "danger")
+            return render_template(
+                "upload.html",
+                title="Upload Evidence",
+                error_message=str(exc),
+                max_upload_mb=max_upload_size_mb(),
+            ), 400
+        except Exception as exc:
+            app.logger.exception("Unhandled error during analysis")
+            message = (
+                "Analysis failed on the server. Please try a smaller JPG/PNG image, "
+                "or check the Render logs for the full traceback."
+            )
+            flash(message, "danger")
+            return render_template(
+                "upload.html",
+                title="Upload Evidence",
+                error_message=message,
+                technical_error=str(exc),
+                max_upload_mb=max_upload_size_mb(),
+            ), 500
 
-    return render_template("upload.html", title="Upload Evidence", error_message=None)
+    return render_template(
+        "upload.html",
+        title="Upload Evidence",
+        error_message=None,
+        max_upload_mb=max_upload_size_mb(),
+    )
 
 
 @app.route("/analysis/<int:analysis_id>")
@@ -1646,6 +1678,32 @@ def forbidden(_error):
 @app.errorhandler(404)
 def not_found(_error):
     return render_template("error.html", title="Not Found", code=404), 404
+
+
+@app.errorhandler(413)
+@app.errorhandler(RequestEntityTooLarge)
+def file_too_large(_error):
+    message = f"Upload is too large. Please use a file under {max_upload_size_mb()} MB."
+    return render_template(
+        "upload.html",
+        title="Upload Evidence",
+        error_message=message,
+        max_upload_mb=max_upload_size_mb(),
+    ), 413
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error("Unhandled application error: %s", error, exc_info=True)
+    return render_template(
+        "error.html",
+        title="Server Error",
+        code=500,
+        message=(
+            "The server hit an unexpected error. If this happened during upload, "
+            "try a smaller JPG/PNG image while the Render logs are checked."
+        ),
+    ), 500
 
 
 if __name__ == "__main__":

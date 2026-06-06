@@ -4,6 +4,7 @@
   <div>
     <p class="eyebrow">Upload Evidence</p>
     <h1>Submit an image or video for prototype forensic analysis and reporting.</h1>
+    <p class="lead">For fastest Render processing, upload JPG/PNG/WEBP files under {{ max_upload_mb or 5 }} MB.</p>
     {% if not current_user %}
       <p class="lead">Reviewer mode is enabled. Uploads run as public demo cases without account creation.</p>
     {% endif %}
@@ -14,6 +15,9 @@
 <section class="panel">
   <h2>Last Upload Error</h2>
   <p>{{ error_message }}</p>
+  {% if technical_error %}
+    <p class="muted">Technical detail: {{ technical_error }}</p>
+  {% endif %}
   <p class="muted">Check the Render logs too. The backend now logs the full exception for this upload attempt.</p>
 </section>
 {% endif %}
@@ -22,7 +26,7 @@
   <form class="panel form-card" method="post" enctype="multipart/form-data">
     <label for="file">Evidence File</label>
     <input id="file" name="file" type="file" accept="image/*,video/*" required data-preview-target="preview-shell">
-    <p class="form-meta">Supported: JPG, PNG, WEBP, TIFF, MP4, MOV, AVI, MKV, WEBM.</p>
+    <p class="form-meta">Supported: JPG, PNG, WEBP, TIFF, MP4, MOV, AVI, MKV, WEBM. Maximum upload: {{ max_upload_mb or 5 }} MB.</p>
     <button type="submit">Analyze Media</button>
   </form>
 

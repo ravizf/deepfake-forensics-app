@@ -14,6 +14,10 @@
   </div>
 
   <form class="panel form-card" method="post">
+    {% if request.args.get("next") %}
+      <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+    {% endif %}
+
     {% if form_mode == "register" %}
       <label for="full_name">Full Name</label>
       <input id="full_name" name="full_name" type="text" placeholder="Analyst name" required>

@@ -176,6 +176,7 @@ SYNC_REPORT_GENERATION = os.getenv("SYNC_REPORT_GENERATION", "false").lower() in
 }
 HISTORY_PAGE_LIMIT = int(os.getenv("HISTORY_PAGE_LIMIT", "25"))
 MAX_BATCH_UPLOADS = int(os.getenv("MAX_BATCH_UPLOADS", "10"))
+GITHUB_URL = "https://github.com/ravizf/deepfake-forensics-app"
 
 
 def current_user():
@@ -183,6 +184,12 @@ def current_user():
     if not user_id:
         return None
     return get_user_by_id(user_id)
+
+
+def safe_redirect_target(target):
+    if target and target.startswith("/") and not target.startswith("//"):
+        return target
+    return None
 
 
 def verification_token_hash(token):
@@ -689,6 +696,7 @@ def inject_globals():
             None,
             metrics_report,
         ),
+        "github_url": GITHUB_URL,
     }
 
 
@@ -1052,7 +1060,7 @@ def home():
         latest_report=latest_report,
         benchmark_summary=benchmark_summary(latest_report, active_detector),
         training_metrics=training_metrics_summary(metrics_report, latest_report, active_detector),
-        github_url="https://github.com/ravizf/deepfake-forensics-app",
+        github_url=GITHUB_URL,
     )
 
 
@@ -1185,7 +1193,10 @@ def login():
                 ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
             )
             flash("Welcome back.", "success")
-            return redirect(url_for("dashboard"))
+            next_target = safe_redirect_target(
+                request.form.get("next") or request.args.get("next")
+            )
+            return redirect(next_target or url_for("dashboard"))
 
     return render_template(
         "auth.html",
@@ -1317,6 +1328,10 @@ def evaluation_page():
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_page():
+    if not g.get("current_user"):
+        flash("Please login or verify OTP to analyze images.", "warning")
+        return redirect(url_for("login", next=request.path))
+
     if request.method == "POST":
         try:
             files = [file for file in request.files.getlist("file") if file and file.filename]
@@ -1328,15 +1343,15 @@ def upload_page():
                         f"Upload up to {MAX_BATCH_UPLOADS} files at once for stable Render processing."
                     )
 
-                is_public = not bool(g.get("current_user"))
-                acting_user = g.get("current_user") or ensure_public_demo_user()
+                is_public = False
+                acting_user = g.get("current_user")
                 batch_results = []
                 for file_storage in files:
                     try:
                         analysis = run_analysis_workflow(
                             file_storage,
                             acting_user=acting_user,
-                            audit_prefix="Submitted public upload" if is_public else None,
+                            audit_prefix=None,
                         )
                         view_analysis = (
                             enrich_public_demo_analysis(analysis)
@@ -1465,8 +1480,12 @@ def report_page(analysis_id):
 
 @app.route("/history")
 def history_page():
-    is_public = not bool(g.get("current_user"))
-    user = g.get("current_user") or ensure_public_demo_user()
+    if not g.get("current_user"):
+        flash("Please login or verify OTP to view analysis history.", "warning")
+        return redirect(url_for("login", next=request.path))
+
+    is_public = False
+    user = g.get("current_user")
     include_all = (not is_public) and user["role"] == "admin"
     limit = 50 if include_all else HISTORY_PAGE_LIMIT
     try:

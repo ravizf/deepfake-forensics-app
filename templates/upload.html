@@ -5,9 +5,6 @@
     <p class="eyebrow">Upload Evidence</p>
     <h1>Submit an image or video for prototype forensic analysis and reporting.</h1>
     <p class="lead">For fastest Render processing, upload JPG/PNG/WEBP files under {{ max_upload_mb or 5 }} MB. Batch mode supports up to {{ max_batch_uploads or 10 }} files.</p>
-    {% if not current_user %}
-      <p class="lead">Reviewer mode is enabled. Uploads run as public demo cases without account creation.</p>
-    {% endif %}
   </div>
 </section>
 

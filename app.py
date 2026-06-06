@@ -517,19 +517,18 @@ def load_user():
 @app.context_processor
 def inject_globals():
     active_detector = manifest_descriptor()
-    latest_report = load_latest_evaluation()
     metrics_report = load_model_metrics()
     return {
         "current_user": g.get("current_user"),
         "app_name": "SnapTrace Forensics",
         "active_detector": active_detector,
-        "active_detector_label": detector_status_label(active_detector, latest_report),
-        "active_detector_note": detector_status_note(active_detector, latest_report),
+        "active_detector_label": detector_status_label(active_detector, metrics_report),
+        "active_detector_note": detector_status_note(active_detector, metrics_report),
         "analysis_engine_label": analysis_engine_label(active_detector),
         "detection_mode_label": detection_mode_label(active_detector),
         "evaluation_status_label": evaluation_status_label(
             active_detector,
-            latest_report,
+            None,
             metrics_report,
         ),
     }
@@ -867,7 +866,7 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
 
 @app.route("/")
 def home():
-    latest_report = load_latest_evaluation()
+    latest_report = None
     active_detector = manifest_descriptor()
     metrics_report = load_model_metrics()
     return render_template(
@@ -883,7 +882,7 @@ def home():
 
 @app.route("/model")
 def model_page():
-    latest_report = load_latest_evaluation()
+    latest_report = None
     detector_status = manifest_descriptor()
     metrics_report = load_model_metrics()
     return render_template(
@@ -904,7 +903,7 @@ def model_info_page():
 
 @app.route("/demo")
 def demo_page():
-    latest_report = load_latest_evaluation()
+    latest_report = None
     active_detector = manifest_descriptor()
     return render_template(
         "demo.html",

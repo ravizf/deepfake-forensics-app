@@ -1,0 +1,52 @@
+{
+  "accuracy": 78.0,
+  "precision": 92.78,
+  "recall": 78.0,
+  "f1_score": 84.69,
+  "sample_count": 100,
+  "classes": [
+    "fake",
+    "real"
+  ],
+  "model": "EfficientNet-B0",
+  "architecture": "efficientnet_b0_binary",
+  "dataset_version": "Local held-out test set, dataset-20260420",
+  "training_date": "2026-04-20T05:06:31Z",
+  "checkpoint_path": "deepfake_model.pth",
+  "calibration_method": "temperature_scaling",
+  "temperature": 1.086684,
+  "evaluation_split": "test",
+  "per_class_accuracy": {
+    "ai_generated": 94.0,
+    "real": 62.0
+  },
+  "false_positive_rate": 12.0,
+  "false_negative_rate": 6.0,
+  "notes": "Measured on the repository's balanced 100-image held-out test split. External public benchmark datasets are listed separately until full FaceForensics++, DFDC, and Celeb-DF runs are completed.",
+  "external_benchmarks": [
+    {
+      "dataset": "FaceForensics++",
+      "status": "Pending full benchmark",
+      "accuracy": "Pending",
+      "precision": "Pending",
+      "recall": "Pending",
+      "f1_score": "Pending"
+    },
+    {
+      "dataset": "DFDC",
+      "status": "Pending full benchmark",
+      "accuracy": "Pending",
+      "precision": "Pending",
+      "recall": "Pending",
+      "f1_score": "Pending"
+    },
+    {
+      "dataset": "Celeb-DF",
+      "status": "Pending full benchmark",
+      "accuracy": "Pending",
+      "precision": "Pending",
+      "recall": "Pending",
+      "f1_score": "Pending"
+    }
+  ]
+}

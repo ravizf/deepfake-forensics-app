@@ -326,7 +326,41 @@ def _extract_faces(image):
     if faces:
         return faces, len(faces), "mtcnn"
 
-    return [], 0, "no-face-detected"
+    try:
+        import cv2
+
+        gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
+        cascade_path = os.path.join(
+            cv2.data.haarcascades,
+            "haarcascade_frontalface_default.xml",
+        )
+        cascade = cv2.CascadeClassifier(cascade_path)
+        detections = cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.08,
+            minNeighbors=4,
+            minSize=(36, 36),
+        )
+        for x, y, width, height in detections:
+            padding = int(max(width, height) * 0.14)
+            left = max(0, int(x) - padding)
+            top = max(0, int(y) - padding)
+            right = min(image.width, int(x + width) + padding)
+            bottom = min(image.height, int(y + height) + padding)
+            crop = image.crop((left, top, right, bottom))
+            if crop.size[0] > 10 and crop.size[1] > 10:
+                faces.append(crop)
+    except Exception:
+        faces = []
+
+    if faces:
+        return faces, len(faces), "opencv-haar"
+
+    side = int(min(image.width, image.height) * 0.72)
+    left = max(0, (image.width - side) // 2)
+    top = max(0, (image.height - side) // 2)
+    estimated_crop = image.crop((left, top, left + side, top + side))
+    return [estimated_crop], 1, "estimated-face-region"
 
 
 def _prepare_image_array(image, metadata):
@@ -665,7 +699,7 @@ def _leaning_prediction(fake_score):
 
 def _analyze_image(file_path, heatmap_dir):
     image = Image.open(file_path).convert("RGB")
-    max_side = 1280
+    max_side = 960
     if max(image.size) > max_side:
         image.thumbnail((max_side, max_side))
     faces, face_count, face_strategy = _extract_faces(image)
@@ -715,6 +749,8 @@ def _analyze_image(file_path, heatmap_dir):
         "artifact_detector": round(artifact_score, 4),
         "frequency_detector": round(frequency_detector, 4),
         "diffusion_gan_detector": round(diffusion_detector, 4),
+        "lighting_contrast_detector": round(contrast, 4),
+        "edge_inconsistency_detector": round(edge_density, 4),
     }
 
     if full_image_prediction is not None:
@@ -724,7 +760,6 @@ def _analyze_image(file_path, heatmap_dir):
             face_fake_score = _clamp01(face_prediction["raw_probability"])
             component_scores["face_classifier"] = round(face_fake_score, 4)
             fake_score = _clamp01(0.60 * full_fake_score + 0.40 * face_fake_score)
-            face_strategy = "mtcnn"
         else:
             face_fake_score = None
             fake_score = full_fake_score

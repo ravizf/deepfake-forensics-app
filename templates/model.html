@@ -12,11 +12,56 @@
     <li>Analysis Engine: Active</li>
     <li>Detection Mode: AI-Assisted Prototype</li>
     <li>Evaluation Status: {{ evaluation_status_label }}</li>
+    <li>Model Architecture: {{ training_metrics.model_name }}</li>
+    <li>Dataset Used: {{ training_metrics.test_dataset }}</li>
+    <li>Sample Count: {{ training_metrics.sample_count }}</li>
     <li>Accuracy: {{ training_metrics.accuracy }}</li>
     <li>Precision: {{ training_metrics.precision }}</li>
     <li>Recall: {{ training_metrics.recall }}</li>
     <li>F1 Score: {{ training_metrics.f1_score }}</li>
   </ul>
+  {% if training_metrics.notes %}
+    <p class="muted">{{ training_metrics.notes }}</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>External Dataset Benchmarks</h2>
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th>Status</th>
+          <th>Accuracy</th>
+          <th>Precision</th>
+          <th>Recall</th>
+          <th>F1 Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for benchmark in training_metrics.external_benchmarks %}
+          <tr>
+            <td>{{ benchmark.dataset }}</td>
+            <td>{{ benchmark.status }}</td>
+            <td>{{ benchmark.accuracy }}</td>
+            <td>{{ benchmark.precision }}</td>
+            <td>{{ benchmark.recall }}</td>
+            <td>{{ benchmark.f1_score }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td>FaceForensics++ / DFDC / Celeb-DF</td>
+            <td>Pending</td>
+            <td>Pending</td>
+            <td>Pending</td>
+            <td>Pending</td>
+            <td>Pending</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="panel">

@@ -27,9 +27,14 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "SnapTrace Forensics Report", ln=True)
     pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 8, f"Case ID: {analysis.get('analysis_id', 'N/A')}", ln=True)
+    pdf.cell(0, 8, f"Report ID: {analysis.get('report_id') or 'Generated on request'}", ln=True)
     pdf.cell(0, 8, f"Timestamp: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True)
+    pdf.cell(0, 8, f"Original File: {analysis.get('original_filename', 'N/A')}", ln=True)
+    pdf.multi_cell(0, 7, f"File SHA-256: {analysis.get('file_sha256') or 'Unavailable'}")
     pdf.cell(0, 8, f"Prediction: {analysis.get('display_prediction') or analysis.get('prediction')}", ln=True)
     pdf.cell(0, 8, f"Confidence: {analysis.get('confidence', 'N/A')}%", ln=True)
+    pdf.multi_cell(0, 7, f"Confidence Note: {analysis.get('confidence_warning') or 'N/A'}")
     pdf.cell(
         0,
         8,
@@ -40,6 +45,9 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
     pdf.cell(0, 8, f"Analysis Engine: {analysis.get('analysis_engine_label', 'Active')}", ln=True)
     pdf.cell(0, 8, f"Detection Mode: {analysis.get('detection_mode_label', 'AI-Assisted')}", ln=True)
     pdf.cell(0, 8, f"Evaluation Status: {analysis.get('evaluation_status_label', 'Benchmark Pending')}", ln=True)
+    pdf.cell(0, 8, f"Model Version: {analysis.get('model_version') or 'N/A'}", ln=True)
+    pdf.cell(0, 8, f"Detector Version: {analysis.get('detector_version') or 'N/A'}", ln=True)
+    pdf.cell(0, 8, f"Dataset Version: {analysis.get('dataset_version') or 'N/A'}", ln=True)
     pdf.cell(0, 8, f"Metadata Found: {analysis.get('metadata_found', 'N/A')}", ln=True)
     pdf.cell(0, 8, f"Face Detected: {analysis.get('face_detected', 'N/A')}", ln=True)
     pdf.ln(2)
@@ -49,6 +57,18 @@ def generate_downloadable_report(analysis, audit_trail, report_dir):
     pdf.set_font("Arial", "", 11)
     for reason in analysis.get("analysis_reasons") or []:
         pdf.multi_cell(0, 7, f"- {reason}")
+
+    pdf.ln(2)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, "Limitations", ln=True)
+    pdf.set_font("Arial", "", 11)
+    for limitation in (
+        "AI-assisted result, not legal proof.",
+        "Accuracy depends on dataset coverage, image quality, compression, and unseen AI generators.",
+        "Missing metadata alone does not confirm manipulation.",
+        "Manual review is recommended for high-impact decisions.",
+    ):
+        pdf.multi_cell(0, 7, f"- {limitation}")
 
     metadata_summary = analysis.get("metadata_summary") or {}
     pdf.ln(2)

@@ -33,6 +33,7 @@
       <li><code>metadata_found</code></li>
       <li><code>metadata_check</code></li>
       <li><code>analysis_reasons</code></li>
+      <li><code>confidence_warning</code></li>
       <li><code>heatmap_url</code></li>
     </ul>
   </article>
@@ -57,14 +58,15 @@
   "risk_score": 9.78,
   "risk_level": "Low",
   "analysis_engine": "Active",
-  "detection_mode": "AI-Assisted",
-  "evaluation_status": "Benchmark Pending",
-  "face_detected": "Yes",
+  "detection_mode": "AI-Assisted Prototype",
+  "evaluation_status": "Benchmark Available",
+  "face_detected": "Estimated region",
   "metadata_found": "No",
-  "metadata_check": "No EXIF metadata found. This can happen in edited, compressed, or AI-generated images.",
+  "metadata_check": "No EXIF metadata found. Missing metadata alone does not confirm manipulation.",
+  "confidence_warning": "Confidence is based mainly on visual analysis because EXIF metadata is unavailable.",
   "analysis_reasons": [
-    "Texture inconsistency detected.",
-    "Metadata missing."
+    "Face texture and blending artifacts stayed low.",
+    "Compression and frequency artifacts did not dominate the score."
   ],
   "heatmap_url": "/public/artifacts/heatmaps/example.png"
 }</code></pre>

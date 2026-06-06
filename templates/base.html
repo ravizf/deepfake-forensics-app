@@ -24,6 +24,7 @@
       <a href="{{ url_for('demo_page') }}">Demo</a>
       <a href="{{ url_for('history_page') }}">History</a>
       <a href="{{ url_for('model_info_page') }}">Model Info</a>
+      <a href="{{ url_for('privacy_page') }}">Privacy</a>
       {% if current_user %}
         {% if current_user.role == 'admin' %}
           <a href="{{ url_for('admin_page') }}">Admin</a>

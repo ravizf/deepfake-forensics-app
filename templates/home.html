@@ -10,10 +10,52 @@
     <div class="hero-actions hero-actions-centered">
       <a class="button-link" href="{{ url_for('demo_page') }}">Try Demo</a>
       <a class="ghost-link" href="{{ url_for('upload_page') }}">Upload Image</a>
+      <a class="ghost-link" href="{{ github_url }}">GitHub</a>
     </div>
     <p class="muted home-disclaimer">
       For research and educational use only. Not legal proof.
     </p>
   </div>
+</section>
+
+<section class="grid four-up">
+  <article class="metric-card">
+    <span>Tech Stack</span>
+    <strong>Python, Flask, PyTorch, OpenCV, SQLite, Render</strong>
+  </article>
+  <article class="metric-card">
+    <span>Dataset Used</span>
+    <strong>{{ training_metrics.test_dataset }}</strong>
+  </article>
+  <article class="metric-card">
+    <span>Model Architecture</span>
+    <strong>{{ training_metrics.model_name }}</strong>
+  </article>
+  <article class="metric-card">
+    <span>Measured Accuracy</span>
+    <strong>{{ training_metrics.accuracy }}</strong>
+  </article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>How it works</h2>
+    <ul class="clean-list">
+      <li>Upload image and normalize size for faster processing.</li>
+      <li>Run visual artifact, frequency, metadata, and classifier checks.</li>
+      <li>Combine signals into prediction, risk score, and heatmap-style evidence.</li>
+      <li>Generate the PDF report only when requested to keep uploads fast.</li>
+    </ul>
+  </article>
+  <article class="panel">
+    <h2>Benchmark Snapshot</h2>
+    <ul class="clean-list">
+      <li>Accuracy: {{ training_metrics.accuracy }}</li>
+      <li>Precision: {{ training_metrics.precision }}</li>
+      <li>Recall: {{ training_metrics.recall }}</li>
+      <li>F1 Score: {{ training_metrics.f1_score }}</li>
+      <li>External datasets: FaceForensics++, DFDC, and Celeb-DF pending.</li>
+    </ul>
+  </article>
 </section>
 {% endblock %}

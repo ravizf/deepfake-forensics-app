@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Privacy</p>
+    <h1>Upload handling and data retention.</h1>
+    <p class="lead">SnapTrace is a research prototype, so privacy expectations are stated plainly.</p>
+  </div>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Uploaded Images</h2>
+    <ul class="clean-list">
+      <li>Uploaded files are used only to run the analysis, heatmap, history, and report workflow.</li>
+      <li>Files are stored on the application instance for case history and report access.</li>
+      <li>Files are not shared with third parties by the application.</li>
+      <li>Public demo samples use bundled sample files, not reviewer personal uploads.</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Retention</h2>
+    <ul class="clean-list">
+      <li>This prototype retains uploaded evidence until deployment storage or the database is cleared.</li>
+      <li>Reports include case ID, timestamp, file hash, prediction, confidence, and limitations.</li>
+      <li>Do not upload sensitive personal evidence unless you are comfortable with prototype storage.</li>
+      <li>This system is for research and education only, not legal proof.</li>
+    </ul>
+  </article>
+</section>
+{% endblock %}

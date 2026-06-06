@@ -95,7 +95,53 @@ DEMO_SAMPLE_ROOTS = [
     Path(app.root_path) / "dataset" / "test",
 ]
 DEMO_SAMPLE_LIMIT_PER_CLASS = 2
+DEMO_SAMPLE_CATALOG = [
+    {
+        "id": "real-selfie",
+        "filename": "real-selfie.jpg",
+        "label": "real",
+        "title": "Real selfie",
+    },
+    {
+        "id": "ai-face",
+        "filename": "ai-face.jpg",
+        "label": "fake",
+        "title": "AI face",
+    },
+    {
+        "id": "compressed-whatsapp",
+        "filename": "compressed-whatsapp.jpg",
+        "label": "real",
+        "title": "Compressed WhatsApp-style image",
+    },
+    {
+        "id": "cropped-image",
+        "filename": "cropped-image.jpg",
+        "label": "review",
+        "title": "Cropped image",
+    },
+    {
+        "id": "low-quality",
+        "filename": "low-quality.jpg",
+        "label": "review",
+        "title": "Low-quality image",
+    },
+    {
+        "id": "low-light",
+        "filename": "low-light.jpg",
+        "label": "real",
+        "title": "Low-light image",
+    },
+]
 MODEL_METRICS_PATH = Path(app.root_path) / "model_metrics.json"
+MODEL_MANIFEST_PATH = Path(app.root_path) / "model_manifest.json"
+SYNC_REPORT_GENERATION = os.getenv("SYNC_REPORT_GENERATION", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+HISTORY_PAGE_LIMIT = int(os.getenv("HISTORY_PAGE_LIMIT", "25"))
 
 
 def current_user():
@@ -134,8 +180,54 @@ def evaluation_status_label(_detector=None, benchmark_report=None, metrics_repor
     return "Benchmark Pending"
 
 
+def manifest_descriptor():
+    if not MODEL_MANIFEST_PATH.exists():
+        return {
+            "engine": "SnapTrace Analysis Engine",
+            "architecture": "efficientnet_b0_binary",
+            "model_version": "N/A",
+            "dataset_version": "Evaluation Pending",
+            "status": "metadata_only",
+        }
+    try:
+        manifest = json.loads(MODEL_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {
+            "engine": "SnapTrace Analysis Engine",
+            "architecture": "efficientnet_b0_binary",
+            "model_version": "N/A",
+            "dataset_version": "Evaluation Pending",
+            "status": "metadata_unavailable",
+        }
+    return {
+        "engine": manifest.get("display_name") or "SnapTrace Analysis Engine",
+        "architecture": manifest.get("architecture", "efficientnet_b0_binary"),
+        "detector_version": manifest.get("detector_version"),
+        "model_version": manifest.get("model_version"),
+        "dataset_version": manifest.get("dataset_version"),
+        "training_date": manifest.get("training_date"),
+        "temperature": manifest.get("temperature"),
+        "calibration_method": manifest.get("calibration_method"),
+        "status": "metadata_only",
+    }
+
+
 def list_demo_samples():
     samples = []
+    catalog_root = Path(app.root_path) / "static" / "demo"
+    for item in DEMO_SAMPLE_CATALOG:
+        path = catalog_root / item["filename"]
+        if path.is_file():
+            samples.append(
+                {
+                    **item,
+                    "path": path,
+                    "preview_url": url_for("static", filename=f"demo/{item['filename']}"),
+                }
+            )
+    if samples:
+        return samples
+
     label_map = {
         "real": "Real sample",
         "fake": "AI-generated sample",
@@ -223,19 +315,33 @@ def training_metrics_summary(metrics_report, benchmark_report=None, detector=Non
     }.get(architecture, architecture or "EfficientNet-B0")
 
     if metrics_report:
+        def _metric_value(key):
+            value = metrics_report.get(key, "Pending")
+            if isinstance(value, (int, float)):
+                return f"{value}%"
+            return str(value)
+
         return {
-            "accuracy": f"{metrics_report.get('accuracy', 'Pending')}%",
-            "precision": f"{metrics_report.get('precision', 'Pending')}%",
-            "recall": f"{metrics_report.get('recall', 'Pending')}%",
-            "f1_score": f"{metrics_report.get('f1_score', 'Pending')}%",
+            "accuracy": _metric_value("accuracy"),
+            "precision": _metric_value("precision"),
+            "recall": _metric_value("recall"),
+            "f1_score": _metric_value("f1_score"),
             "test_dataset": metrics_report.get("dataset_version") or "Benchmark Available After Training",
             "model_name": metrics_report.get("model") or "EfficientNet-B0",
             "evaluation_split": metrics_report.get("evaluation_split") or "val",
+            "sample_count": metrics_report.get("sample_count") or "N/A",
+            "notes": metrics_report.get("notes") or "",
+            "external_benchmarks": metrics_report.get("external_benchmarks") or [],
+            "per_class_accuracy": metrics_report.get("per_class_accuracy") or {},
         }
 
     fallback = benchmark_summary(benchmark_report, detector)
     fallback["model_name"] = model_name
     fallback["evaluation_split"] = "evaluation"
+    fallback["sample_count"] = "N/A"
+    fallback["notes"] = ""
+    fallback["external_benchmarks"] = []
+    fallback["per_class_accuracy"] = {}
     return fallback
 
 
@@ -286,24 +392,42 @@ def analysis_reasons(analysis):
     real_score = float(analysis.get("real_prob") or 0.0)
     face_count = int(analysis.get("face_count") or 0)
     detector_breakdown = analysis.get("detector_breakdown") or {}
+    artifact_score = float(detector_breakdown.get("artifact_detector") or 0.0)
+    frequency_score = float(detector_breakdown.get("frequency_detector") or 0.0)
+    diffusion_score = float(detector_breakdown.get("diffusion_gan_detector") or 0.0)
 
-    if face_count > 0:
-        reasons.append("Face texture inconsistency detected.")
+    if face_detection_label(analysis) == "Estimated region":
+        reasons.append("Estimated face-region crop used after image-level scan.")
+    elif face_count > 0:
+        if artifact_score >= 0.55:
+            reasons.append("Face texture and blending artifacts were elevated.")
+        else:
+            reasons.append("Face texture and blending artifacts stayed low.")
     else:
         reasons.append("Image-level visual patterns analyzed.")
 
-    if detector_breakdown.get("frequency_detector", 0) >= 0.55:
-        reasons.append("Compression artifacts observed.")
-    if detector_breakdown.get("artifact_detector", 0) >= 0.55:
-        reasons.append("Texture inconsistency detected.")
-    if detector_breakdown.get("diffusion_gan_detector", 0) >= 0.55:
-        reasons.append("Possible synthetic generation patterns detected.")
+    if frequency_score >= 0.55:
+        reasons.append("Compression and frequency artifacts were elevated.")
+    else:
+        reasons.append("Compression and frequency artifacts did not dominate the score.")
+
+    if diffusion_score >= 0.55 or fake_score >= 70:
+        reasons.append("Synthetic-generation pattern score was elevated.")
+    elif real_score >= 70:
+        reasons.append("Visual score favored natural image patterns over synthetic ones.")
+    else:
+        reasons.append("Visual score stayed close enough to require context review.")
+
+    if artifact_score >= 0.55:
+        reasons.append("Lighting, texture, or edge consistency signals showed a possible mismatch.")
+    else:
+        reasons.append("Lighting, texture, and edge consistency did not show a strong mismatch.")
 
     metadata_message = metadata_check_text(analysis)
     if analysis.get("metadata_summary", {}).get("exif_present"):
         reasons.append("Camera metadata is present in the uploaded file.")
     elif metadata_message:
-        reasons.append("Missing or altered metadata.")
+        reasons.append("Metadata is unavailable, so confidence should be read as visual-only.")
 
     if not reasons:
         if fake_score > real_score:
@@ -311,7 +435,7 @@ def analysis_reasons(analysis):
         else:
             reasons.append("The model score leaned toward natural-photo characteristics.")
 
-    return reasons[:4]
+    return reasons[:5]
 
 
 def decision_summary(analysis):
@@ -328,6 +452,26 @@ def decision_summary(analysis):
     if confidence >= 75:
         return f"{analysis.get('risk_level', 'Medium')} risk because the visual score shows a clear lead."
     return "Review recommended because the visual score and supporting signals are mixed."
+
+
+def confidence_warning(analysis):
+    if analysis.get("metadata_found") == "No":
+        return (
+            "Confidence is based mainly on visual analysis because EXIF metadata is unavailable. "
+            "Missing metadata alone does not confirm manipulation."
+        )
+    if analysis.get("confidence_band") in {"Low", "Review Required"}:
+        return "Confidence is limited because the detector score is close to the review range."
+    return "Confidence combines visual scoring, artifact checks, and available metadata context."
+
+
+def face_detection_label(analysis):
+    evidence_text = " ".join(str(item) for item in analysis.get("evidence_points") or [])
+    if analysis.get("face_strategy") == "estimated-face-region" or "estimated-face-region" in evidence_text:
+        return "Estimated region"
+    if int(analysis.get("face_count") or 0) > 0:
+        return "Yes"
+    return "No"
 
 
 def fraud_score_and_risk(analysis):
@@ -372,7 +516,7 @@ def load_user():
 
 @app.context_processor
 def inject_globals():
-    active_detector = detector_descriptor()
+    active_detector = manifest_descriptor()
     latest_report = load_latest_evaluation()
     metrics_report = load_model_metrics()
     return {
@@ -451,8 +595,6 @@ def enrich_analysis(analysis):
     )
     analysis["report_download_url"] = (
         url_for("download_report", analysis_id=analysis["analysis_id"])
-        if report_path
-        else None
     )
     analysis["report_artifact_url"] = (
         url_for("artifact_file", kind="reports", filename=os.path.basename(report_path))
@@ -470,13 +612,13 @@ def enrich_analysis(analysis):
     analysis["detection_mode_label"] = detection_mode_label()
     metrics_report = load_model_metrics()
     analysis["evaluation_status_label"] = evaluation_status_label(
-        detector_descriptor(),
+        manifest_descriptor(),
         latest_report,
         metrics_report,
     )
     analysis["detector_badge"] = analysis["evaluation_status_label"]
     analysis["model_status_label"] = analysis["evaluation_status_label"]
-    analysis["face_detected"] = "Yes" if int(analysis.get("face_count") or 0) > 0 else "No"
+    analysis["face_detected"] = face_detection_label(analysis)
     analysis["image_quality_warning"] = image_quality_warning(analysis)
     analysis["metadata_check"] = metadata_check_text(analysis)
     analysis["metadata_summary"] = extract_media_metadata(analysis)
@@ -489,7 +631,30 @@ def enrich_analysis(analysis):
     )
     analysis["display_risk_level"] = analysis["risk_level"]
     analysis["decision_summary"] = decision_summary(analysis)
+    analysis["confidence_warning"] = confidence_warning(analysis)
     analysis["prototype_notice"] = "This is AI-assisted analysis and not legal proof."
+    return analysis
+
+
+def enrich_history_case(analysis):
+    if not analysis:
+        return None
+
+    analysis = dict(analysis)
+    analysis["result_url"] = url_for("result_page", analysis_id=analysis["analysis_id"])
+    analysis["evidence_url"] = url_for("evidence_page", analysis_id=analysis["analysis_id"])
+    analysis["report_url"] = url_for("report_page", analysis_id=analysis["analysis_id"])
+    analysis["report_download_url"] = url_for("download_report", analysis_id=analysis["analysis_id"])
+    analysis["display_prediction"] = (
+        str(analysis.get("prediction") or "").replace("AI-Generated", "AI Generated")
+    )
+    analysis["face_detected"] = face_detection_label(analysis)
+    analysis["risk_score"], analysis["risk_level"] = calculate_risk_score(
+        analysis.get("fake_prob") or 0.0,
+        "No",
+        face_detected=int(analysis.get("face_count") or 0) > 0,
+    )
+    analysis["detector_badge"] = analysis.get("analysis_mode") or "analysis"
     return analysis
 
 
@@ -518,6 +683,7 @@ def build_analysis_response(analysis):
         "fraud_score": analysis.get("fraud_score"),
         "risk_level": analysis.get("display_risk_level") or analysis.get("risk_level"),
         "decision_summary": analysis.get("decision_summary"),
+        "confidence_warning": analysis.get("confidence_warning"),
         "prototype_notice": analysis.get("prototype_notice"),
         "fake_prob": analysis.get("fake_prob"),
         "real_prob": analysis.get("real_prob"),
@@ -570,7 +736,12 @@ def preprocess_image(file_path):
     try:
         with Image.open(file_path) as image:
             normalized = ImageOps.exif_transpose(image).convert("RGB")
-            normalized.save(file_path)
+            if max(normalized.size) > 960:
+                normalized.thumbnail((960, 960), Image.Resampling.LANCZOS)
+            save_kwargs = {}
+            if os.path.splitext(file_path.lower())[1] in {".jpg", ".jpeg"}:
+                save_kwargs = {"quality": 88, "optimize": True}
+            normalized.save(file_path, **save_kwargs)
             return normalized.size
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise ValueError("Unsupported or corrupted image file.") from exc
@@ -651,27 +822,35 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
             ),
         )
         analysis = enrich_analysis(get_analysis_detail(analysis_id))
-        try:
-            audit_trail = get_case_audit_logs(upload_id=upload_id, analysis_id=analysis_id)
-            report_path = generate_downloadable_report(
-                analysis=analysis,
-                audit_trail=audit_trail,
-                report_dir=app.config["REPORT_FOLDER"],
-            )
-            create_report(analysis_id, report_path, "ready")
+        if SYNC_REPORT_GENERATION:
+            try:
+                audit_trail = get_case_audit_logs(upload_id=upload_id, analysis_id=analysis_id)
+                report_path = generate_downloadable_report(
+                    analysis=analysis,
+                    audit_trail=audit_trail,
+                    report_dir=app.config["REPORT_FOLDER"],
+                )
+                create_report(analysis_id, report_path, "ready")
+                audit(
+                    "REPORT_GENERATED",
+                    "report",
+                    analysis_id,
+                    f"Generated forensic report for analysis #{analysis_id}",
+                )
+            except Exception as report_exc:
+                app.logger.exception("Report generation failed")
+                audit(
+                    "REPORT_GENERATION_FAILED",
+                    "report",
+                    analysis_id,
+                    f"Report generation failed: {report_exc}",
+                )
+        else:
             audit(
-                "REPORT_GENERATED",
+                "REPORT_DEFERRED",
                 "report",
                 analysis_id,
-                f"Generated forensic report for analysis #{analysis_id}",
-            )
-        except Exception as report_exc:
-            app.logger.exception("Report generation failed")
-            audit(
-                "REPORT_GENERATION_FAILED",
-                "report",
-                analysis_id,
-                f"Report generation failed: {report_exc}",
+                f"Report generation deferred until requested for analysis #{analysis_id}",
             )
         return enrich_analysis(get_analysis_detail(analysis_id))
     except Exception as exc:
@@ -689,20 +868,23 @@ def run_analysis_workflow(file_storage, acting_user=None, audit_prefix=None):
 @app.route("/")
 def home():
     latest_report = load_latest_evaluation()
-    active_detector = detector_descriptor()
+    active_detector = manifest_descriptor()
+    metrics_report = load_model_metrics()
     return render_template(
         "home.html",
         title="Home",
         demo_samples=list_demo_samples(),
         latest_report=latest_report,
         benchmark_summary=benchmark_summary(latest_report, active_detector),
+        training_metrics=training_metrics_summary(metrics_report, latest_report, active_detector),
+        github_url="https://github.com/ravizf/deepfake-forensics-app",
     )
 
 
 @app.route("/model")
 def model_page():
     latest_report = load_latest_evaluation()
-    detector_status = detector_descriptor()
+    detector_status = manifest_descriptor()
     metrics_report = load_model_metrics()
     return render_template(
         "model.html",
@@ -723,7 +905,7 @@ def model_info_page():
 @app.route("/demo")
 def demo_page():
     latest_report = load_latest_evaluation()
-    active_detector = detector_descriptor()
+    active_detector = manifest_descriptor()
     return render_template(
         "demo.html",
         title="Try Demo",
@@ -739,6 +921,11 @@ def api_docs_page():
         title="API Docs",
         public_api_enabled=app.config["PUBLIC_API_ENABLED"],
     )
+
+
+@app.route("/privacy")
+def privacy_page():
+    return render_template("privacy.html", title="Privacy")
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -920,8 +1107,12 @@ def report_page(analysis_id):
 @login_required
 def history_page():
     include_all = g.current_user["role"] == "admin"
-    cases = [enrich_analysis(case) for case in list_user_history(g.current_user["id"], include_all)]
-    return render_template("history.html", title="Report History", cases=cases)
+    limit = 50 if include_all else HISTORY_PAGE_LIMIT
+    cases = [
+        enrich_history_case(case)
+        for case in list_user_history(g.current_user["id"], include_all, limit=limit)
+    ]
+    return render_template("history.html", title="Report History", cases=cases, limit=limit)
 
 
 @app.route("/admin")

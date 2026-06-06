@@ -6,7 +6,6 @@ requests
 gunicorn
 torch
 torchvision
-opencv-python
+opencv-python-headless
 fpdf
 exifread
-scikit-learn

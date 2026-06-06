@@ -1310,7 +1310,7 @@ def health():
 
 @app.route("/api/health")
 def api_health():
-    detector = detector_descriptor()
+    detector = manifest_descriptor()
     return jsonify(
         {
             "status": "ok",

@@ -25,17 +25,25 @@
     <strong>Python, Flask, PyTorch, OpenCV, SQLite, Render</strong>
   </article>
   <article class="metric-card">
-    <span>Dataset Used</span>
-    <strong>{{ training_metrics.test_dataset }}</strong>
+    <span>Evaluation Dataset</span>
+    <strong>Balanced held-out test split ({{ training_metrics.sample_count }} images)</strong>
   </article>
   <article class="metric-card">
     <span>Model Architecture</span>
     <strong>{{ training_metrics.model_name }}</strong>
   </article>
   <article class="metric-card">
-    <span>Measured Accuracy</span>
-    <strong>{{ training_metrics.accuracy }}</strong>
+    <span>Benchmark Scope</span>
+    <strong>Accuracy, Precision, Recall, F1 and error rates</strong>
   </article>
+</section>
+
+<section class="grid five-up">
+  <article class="metric-card"><span>Accuracy</span><strong>{{ training_metrics.accuracy }}</strong></article>
+  <article class="metric-card"><span>Precision</span><strong>{{ training_metrics.precision }}</strong></article>
+  <article class="metric-card"><span>Recall</span><strong>{{ training_metrics.recall }}</strong></article>
+  <article class="metric-card"><span>F1 Score</span><strong>{{ training_metrics.f1_score }}</strong></article>
+  <article class="metric-card"><span>ROC-AUC</span><strong>{{ training_metrics.roc_auc }}</strong></article>
 </section>
 
 <section class="grid two-up">
@@ -55,8 +63,43 @@
       <li>Precision: {{ training_metrics.precision }}</li>
       <li>Recall: {{ training_metrics.recall }}</li>
       <li>F1 Score: {{ training_metrics.f1_score }}</li>
+      <li>False-positive rate: {{ training_metrics.false_positive_rate }}</li>
+      <li>False-negative rate: {{ training_metrics.false_negative_rate }}</li>
       <li>External datasets: FaceForensics++, DFDC, and Celeb-DF pending.</li>
     </ul>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Detection Architecture</h2>
+  <div class="architecture-flow" aria-label="Deepfake detection architecture">
+    <div><span>1</span><strong>Image</strong><small>Secure upload</small></div>
+    <b>→</b>
+    <div><span>2</span><strong>Preprocessing</strong><small>Resize, normalize, face region</small></div>
+    <b>→</b>
+    <div><span>3</span><strong>EfficientNet-B0</strong><small>Visual feature extraction</small></div>
+    <b>→</b>
+    <div><span>4</span><strong>Classification</strong><small>Real / AI / Review</small></div>
+    <b>→</b>
+    <div><span>5</span><strong>Forensic Report</strong><small>Evidence, hash, heatmap</small></div>
+  </div>
+</section>
+
+<section class="grid three-up">
+  <article class="panel">
+    <h2>Image Analysis</h2>
+    <p><strong>Status: Active</strong></p>
+    <p class="muted">Classifier, metadata inspection, visual evidence, and reports.</p>
+  </article>
+  <article class="panel">
+    <h2>Video Analysis</h2>
+    <p><strong>Status: Prototype</strong></p>
+    <p class="muted">Frame-based analysis is supported, with further temporal modeling planned.</p>
+  </article>
+  <article class="panel">
+    <h2>Audio Analysis</h2>
+    <p><strong>Status: Roadmap</strong></p>
+    <p class="muted">Audio deepfake detection is not yet implemented.</p>
   </article>
 </section>
 
@@ -92,6 +135,18 @@
 <section class="panel">
   <h2>Example Results</h2>
   <p class="lead">Try the demo set to compare real selfie, AI face, compressed, cropped, low-quality, and low-light examples.</p>
+  {% if demo_samples %}
+    <div class="grid two-up sample-results">
+      {% for sample in demo_samples[:2] %}
+        <article class="panel demo-card">
+          {% if sample.preview_url %}<img src="{{ sample.preview_url }}" alt="{{ sample.title }}">{% endif %}
+          <p class="eyebrow">{{ sample.title }}</p>
+          <h3>{{ sample.label|title }} example</h3>
+          <a href="{{ url_for('run_demo_sample', sample_id=sample.id) }}">Open prediction, metadata, and heatmap</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% endif %}
   <div class="hero-actions">
     <a class="button-link" href="{{ url_for('demo_page') }}">Try Demo Samples</a>
     <a class="ghost-link" href="{{ url_for('model_info_page') }}">View Model Metrics</a>

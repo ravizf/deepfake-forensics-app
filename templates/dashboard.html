@@ -46,14 +46,20 @@
   </article>
 
   <article class="panel">
-    <h2>Detection Accuracy Graph</h2>
-    <div class="metric-stack">
-      <span>Accuracy: {{ dashboard_visual.accuracy }}</span>
-      <span>Precision: {{ dashboard_visual.precision }}</span>
-      <span>Recall: {{ dashboard_visual.recall }}</span>
-      <span>F1 Score: {{ dashboard_visual.f1_score }}</span>
+    <h2>Benchmark Performance</h2>
+    <div class="bar-metric">
+      <span>Accuracy</span><div class="bar-track"><span style="width: {{ dashboard_visual.accuracy_value }}%"></span></div><strong>{{ dashboard_visual.accuracy }}</strong>
     </div>
-    <p class="muted">Metrics come from the stored benchmark report for the current model.</p>
+    <div class="bar-metric">
+      <span>Precision</span><div class="bar-track bar-success"><span style="width: {{ dashboard_visual.precision_value }}%"></span></div><strong>{{ dashboard_visual.precision }}</strong>
+    </div>
+    <div class="bar-metric">
+      <span>Recall</span><div class="bar-track bar-warning"><span style="width: {{ dashboard_visual.recall_value }}%"></span></div><strong>{{ dashboard_visual.recall }}</strong>
+    </div>
+    <div class="bar-metric">
+      <span>F1 Score</span><div class="bar-track bar-success"><span style="width: {{ dashboard_visual.f1_value }}%"></span></div><strong>{{ dashboard_visual.f1_score }}</strong>
+    </div>
+    <p class="muted">Current held-out benchmark snapshot. A historical trend will be shown after multiple benchmark runs are stored.</p>
   </article>
 </section>
 

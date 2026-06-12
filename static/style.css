@@ -471,6 +471,51 @@ button {
   color: var(--muted);
 }
 
+.architecture-flow {
+  display: grid;
+  grid-template-columns: repeat(9, auto);
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.architecture-flow > div {
+  min-width: 8.5rem;
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem;
+  text-align: center;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(95, 214, 255, 0.2);
+  background: linear-gradient(145deg, rgba(95, 214, 255, 0.08), rgba(255, 159, 67, 0.06));
+}
+
+.architecture-flow > div > span {
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-grid;
+  place-items: center;
+  margin: 0 auto;
+  border-radius: 999px;
+  color: #09111b;
+  background: var(--accent-2);
+  font-weight: 800;
+}
+
+.architecture-flow small {
+  color: var(--muted);
+}
+
+.architecture-flow > b {
+  color: var(--accent);
+  font-size: 1.4rem;
+}
+
+.sample-results {
+  margin-top: 1rem;
+}
+
 label {
   font-weight: 700;
 }
@@ -607,5 +652,14 @@ td {
 
   .bar-metric {
     grid-template-columns: 1fr;
+  }
+
+  .architecture-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture-flow > b {
+    transform: rotate(90deg);
+    text-align: center;
   }
 }

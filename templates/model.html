@@ -19,11 +19,32 @@
     <li>Precision: {{ training_metrics.precision }}</li>
     <li>Recall: {{ training_metrics.recall }}</li>
     <li>F1 Score: {{ training_metrics.f1_score }}</li>
+    <li>ROC-AUC: {{ training_metrics.roc_auc }}</li>
+    <li>False Positive Rate: {{ training_metrics.false_positive_rate }}</li>
+    <li>False Negative Rate: {{ training_metrics.false_negative_rate }}</li>
   </ul>
   {% if training_metrics.notes %}
     <p class="muted">{{ training_metrics.notes }}</p>
   {% endif %}
 </section>
+
+<section class="panel">
+  <h2>Model Architecture</h2>
+  <div class="architecture-flow">
+    <div><strong>Input</strong><small>RGB image</small></div><b>→</b>
+    <div><strong>Preprocess</strong><small>224 x 224 + ImageNet normalization</small></div><b>→</b>
+    <div><strong>EfficientNet-B0</strong><small>Fine-tuned visual features</small></div><b>→</b>
+    <div><strong>Calibrated logits</strong><small>Temperature scaling</small></div><b>→</b>
+    <div><strong>Decision</strong><small>Real / AI / Review</small></div>
+  </div>
+</section>
+
+{% if training_metrics.per_class_accuracy %}
+<section class="grid two-up">
+  <article class="metric-card"><span>AI-Generated Class Accuracy</span><strong>{{ training_metrics.per_class_accuracy.ai_generated }}%</strong></article>
+  <article class="metric-card"><span>Real Class Accuracy</span><strong>{{ training_metrics.per_class_accuracy.real }}%</strong></article>
+</section>
+{% endif %}
 
 <section class="panel">
   <h2>External Dataset Benchmarks</h2>

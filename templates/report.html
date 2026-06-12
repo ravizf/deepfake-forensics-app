@@ -80,6 +80,28 @@
   <p class="muted">{{ analysis.prototype_notice }}</p>
 </section>
 
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Final Verdict</h2>
+    <p class="lead"><strong>{{ analysis.display_prediction or analysis.prediction }}</strong> at {{ analysis.confidence }}% confidence.</p>
+    <p>{{ analysis.decision_summary }}</p>
+    <ul class="clean-list">
+      <li>Risk: {{ analysis.risk_score or analysis.fraud_score }}/100 ({{ analysis.risk_level }})</li>
+      <li>Model Version: {{ analysis.model_version or analysis.detector_version or "N/A" }}</li>
+      <li>File Hash: <code>{{ analysis.file_sha256 or "Unavailable" }}</code></li>
+      <li>Analysis Timestamp: {{ analysis.created_at }}</li>
+    </ul>
+  </article>
+  <article class="panel">
+    <h2>Heatmap Evidence</h2>
+    {% if analysis.heatmap_url %}
+      <img class="evidence-image" src="{{ analysis.heatmap_url }}" alt="Forensic heatmap evidence">
+    {% else %}
+      <p class="muted">No heatmap was generated for this case.</p>
+    {% endif %}
+  </article>
+</section>
+
 <section class="panel report-preview">
   <h2>Rendered Report</h2>
   {% if analysis.report_artifact_url %}

@@ -10,7 +10,7 @@
   ],
   "model": "EfficientNet-B0",
   "architecture": "efficientnet_b0_binary",
-  "dataset_version": "Local held-out test set, dataset-20260420",
+  "dataset_version": "Balanced local held-out test set (100 images)",
   "training_date": "2026-04-20T05:06:31Z",
   "checkpoint_path": "deepfake_model.pth",
   "calibration_method": "temperature_scaling",

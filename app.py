@@ -52,6 +52,7 @@ from database import (
     get_user_by_verification_token_hash,
     init_db,
     list_user_history,
+    list_user_audit_events,
     log_audit_event,
     mark_user_email_verified,
     set_user_email_verification_token,
@@ -476,6 +477,9 @@ def training_metrics_summary(metrics_report, benchmark_report=None, detector=Non
             "notes": metrics_report.get("notes") or "",
             "external_benchmarks": metrics_report.get("external_benchmarks") or [],
             "per_class_accuracy": metrics_report.get("per_class_accuracy") or {},
+            "roc_auc": metrics_report.get("roc_auc") or "Not measured",
+            "false_positive_rate": _metric_value("false_positive_rate"),
+            "false_negative_rate": _metric_value("false_negative_rate"),
         }
 
     fallback = benchmark_summary(benchmark_report, detector)
@@ -485,6 +489,9 @@ def training_metrics_summary(metrics_report, benchmark_report=None, detector=Non
     fallback["notes"] = ""
     fallback["external_benchmarks"] = []
     fallback["per_class_accuracy"] = {}
+    fallback["roc_auc"] = "Not measured"
+    fallback["false_positive_rate"] = "Pending"
+    fallback["false_negative_rate"] = "Pending"
     return fallback
 
 
@@ -492,6 +499,15 @@ def percentage(part, total):
     if not total:
         return 0
     return round((float(part) / float(total)) * 100, 1)
+
+
+def metric_number(value):
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace("%", "").strip())
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def dashboard_visual_summary(summary, training_metrics):
@@ -504,6 +520,10 @@ def dashboard_visual_summary(summary, training_metrics):
         "precision": training_metrics.get("precision", "Pending"),
         "recall": training_metrics.get("recall", "Pending"),
         "f1_score": training_metrics.get("f1_score", "Pending"),
+        "accuracy_value": metric_number(training_metrics.get("accuracy")),
+        "precision_value": metric_number(training_metrics.get("precision")),
+        "recall_value": metric_number(training_metrics.get("recall")),
+        "f1_value": metric_number(training_metrics.get("f1_score")),
     }
 
 
@@ -1299,6 +1319,29 @@ def dashboard():
     )
 
 
+@app.route("/profile")
+@login_required
+def profile_page():
+    summary = get_dashboard_summary(g.current_user["id"])
+    reports = [
+        enrich_history_case(case)
+        for case in list_user_history(g.current_user["id"], include_all=False, limit=10)
+    ]
+    activity = list_user_audit_events(g.current_user["id"], limit=20)
+    download_activity = [
+        event for event in activity if event.get("action") == "REPORT_DOWNLOADED"
+    ]
+    return render_template(
+        "profile.html",
+        title="Profile",
+        profile_user=g.current_user,
+        summary=summary,
+        reports=reports,
+        activity=activity,
+        download_activity=download_activity,
+    )
+
+
 @app.route("/evaluation", methods=["GET", "POST"])
 @login_required
 def evaluation_page():
@@ -1541,6 +1584,12 @@ def download_report(analysis_id):
     ensure_case_access(analysis)
     refreshed = ensure_report_record(analysis)
     analysis = enrich_analysis(refreshed)
+    audit(
+        "REPORT_DOWNLOADED",
+        "report",
+        analysis_id,
+        f"Downloaded report for analysis #{analysis_id}",
+    )
     return send_file(
         analysis["report_path"],
         as_attachment=True,

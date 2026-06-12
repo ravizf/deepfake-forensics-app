@@ -787,6 +787,22 @@ def get_dashboard_summary(user_id):
     }
 
 
+def list_user_audit_events(user_id, limit=20):
+    connection = get_connection()
+    rows = connection.execute(
+        """
+        SELECT action, target_type, target_id, details, ip_address, created_at
+        FROM audit_logs
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    ).fetchall()
+    connection.close()
+    return [dict(row) for row in rows]
+
+
 def get_admin_summary():
     connection = get_connection()
     totals = connection.execute(

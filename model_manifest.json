@@ -3,7 +3,7 @@
   "framework": "pytorch_state_dict",
   "architecture": "efficientnet_b0_binary",
   "model_version": "snaptrace-efficientnet-b0-v1",
-  "dataset_version": "dataset-20260420",
+  "dataset_version": "Balanced local held-out test set (100 images)",
   "training_date": "2026-04-20T05:06:31Z",
   "checkpoint_path": "deepfake_model.pth",
   "class_names": [

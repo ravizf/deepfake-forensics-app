@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-header">
+  <div>
+    <p class="eyebrow">Analyst Profile</p>
+    <h1>{{ profile_user.full_name }}</h1>
+    <p class="lead">Manage your SnapTrace workspace, saved cases, and report activity.</p>
+  </div>
+  <a class="button-link" href="{{ url_for('upload_page') }}">Upload Image</a>
+</section>
+
+<section class="grid four-up">
+  <article class="metric-card"><span>Total Analyses</span><strong>{{ summary.total_cases }}</strong></article>
+  <article class="metric-card"><span>AI Detected</span><strong>{{ summary.fake_cases }}</strong></article>
+  <article class="metric-card"><span>Real Detected</span><strong>{{ summary.real_cases }}</strong></article>
+  <article class="metric-card"><span>Reports Ready</span><strong>{{ summary.reports_ready }}</strong></article>
+</section>
+
+<section class="grid two-up">
+  <article class="panel">
+    <h2>Account Details</h2>
+    <ul class="clean-list">
+      <li>Email: {{ profile_user.email }}</li>
+      <li>Role: {{ profile_user.role|title }}</li>
+      <li>Email Verified: {% if profile_user.email_verified_at %}Yes{% else %}No{% endif %}</li>
+      <li>Joined: {{ profile_user.created_at }}</li>
+      <li>Last Login: {{ profile_user.last_login or "First session" }}</li>
+    </ul>
+  </article>
+
+  <article class="panel">
+    <h2>Download History</h2>
+    {% if download_activity %}
+      <ul class="activity-list">
+        {% for event in download_activity %}
+          <li>
+            <strong>Report downloaded</strong>
+            <span>{{ event.details }}</span>
+            <small>{{ event.created_at }}</small>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No report downloads recorded yet.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="panel" id="saved-reports">
+  <h2>Saved Reports and Cases</h2>
+  {% if reports %}
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Prediction</th>
+            <th>Confidence</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for case in reports %}
+            <tr>
+              <td>{{ case.original_filename }}</td>
+              <td>{{ case.display_prediction or case.prediction }}</td>
+              <td>{{ case.confidence }}%</td>
+              <td>{{ case.created_at }}</td>
+              <td>
+                <a href="{{ case.result_url }}">Result</a>
+                | <a href="{{ case.evidence_url }}">Heatmap</a>
+                | <a href="{{ case.report_download_url }}">Download Report</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No saved analyses yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

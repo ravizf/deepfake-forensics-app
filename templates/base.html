@@ -25,9 +25,10 @@
       <a href="{{ url_for('privacy_page') }}">Privacy</a>
       <a href="{{ github_url }}">GitHub</a>
       {% if current_user %}
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('upload_page') }}">Upload</a>
+        <a href="{{ url_for('dashboard') }}">User Dashboard</a>
+        <a href="{{ url_for('upload_page') }}">Upload Image</a>
         <a href="{{ url_for('history_page') }}">History</a>
+        <a href="{{ url_for('history_page') }}#download-reports">Download Reports</a>
         {% if current_user.role == 'admin' %}
           <a href="{{ url_for('admin_page') }}">Admin</a>
         {% endif %}
